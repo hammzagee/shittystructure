@@ -289,6 +289,9 @@ const state = {
   verificationChecks: null,
   pendingTurnstile: null,
   turnstileLoadPromise: null,
+  turnstileTokenPromise: null,
+  cachedTurnstileToken: null,
+  cachedTurnstileExpiresAt: 0,
   turnstileWidgetId: null,
   locale: translations[localStorage.getItem("locale")] ? localStorage.getItem("locale") : "en"
 };
@@ -344,6 +347,7 @@ async function init() {
     state.verificationChecks = null;
     renderVerificationDetails(state.verificationChecks);
     updatePhotoStatus();
+    prefetchTurnstileToken();
   });
   elements.issueForm.addEventListener("submit", submitIssue);
   elements.verifyForm.addEventListener("submit", submitVerification);
@@ -355,6 +359,9 @@ async function init() {
 function openDialog(dialog) {
   dialog.showModal();
   syncModalState();
+  if (dialog === elements.verifyDialog && turnstileEnabled()) {
+    loadTurnstileScript().catch(() => {});
+  }
 }
 
 function syncModalState() {
@@ -818,6 +825,50 @@ function turnstileEnabled() {
 async function getTurnstileToken() {
   if (!turnstileEnabled()) return "";
 
+  if (state.cachedTurnstileToken && state.cachedTurnstileExpiresAt > Date.now() + 5000) {
+    const token = state.cachedTurnstileToken;
+    state.cachedTurnstileToken = null;
+    state.cachedTurnstileExpiresAt = 0;
+    return token;
+  }
+
+  if (state.turnstileTokenPromise) {
+    try {
+      const token = await state.turnstileTokenPromise;
+      if (state.cachedTurnstileToken === token) {
+        const isFresh = state.cachedTurnstileExpiresAt > Date.now() + 5000;
+        state.cachedTurnstileToken = null;
+        state.cachedTurnstileExpiresAt = 0;
+        if (!isFresh) return requestTurnstileToken();
+      }
+      return token;
+    } finally {
+      state.turnstileTokenPromise = null;
+    }
+  }
+
+  return requestTurnstileToken();
+}
+
+function prefetchTurnstileToken() {
+  if (!turnstileEnabled() || !elements.verifyPhotoInput.files?.[0]) return;
+  if (state.cachedTurnstileToken && state.cachedTurnstileExpiresAt > Date.now() + 5000) return;
+  if (state.turnstileTokenPromise) return;
+
+  state.turnstileTokenPromise = requestTurnstileToken()
+    .then((token) => {
+      state.cachedTurnstileToken = token;
+      state.cachedTurnstileExpiresAt = Date.now() + 240000;
+      return token;
+    })
+    .catch((error) => {
+      state.turnstileTokenPromise = null;
+      throw error;
+    });
+  state.turnstileTokenPromise.catch(() => {});
+}
+
+async function requestTurnstileToken() {
   const turnstile = await waitForTurnstile();
   const widgetId = ensureTurnstileWidget(turnstile);
 

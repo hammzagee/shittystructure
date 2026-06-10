@@ -448,8 +448,6 @@ async function voteOnIssue(env, issueId, request) {
 
 async function verifyPhoto(env, request) {
   const form = await request.formData();
-  const turnstileError = await requireTurnstile(env, request, form.get("turnstile_token"));
-  if (turnstileError) return turnstileError;
 
   const photo = form.get("photo");
   const branchId = String(form.get("branch_id") || focusBranchId);
@@ -466,10 +464,13 @@ async function verifyPhoto(env, request) {
     return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request, {}, emptyVerificationChecks(branchId));
   }
 
+  const turnstilePromise = requireTurnstile(env, request, form.get("turnstile_token"));
+  const branchPromise = getVerificationBranch(env, branchId);
   const buffer = await photo.arrayBuffer();
   const metadata = readImageMetadata(buffer);
   const takenAt = parseExifDate(metadata.dateTimeOriginal || metadata.dateTimeDigitized || metadata.dateTime);
-  const branch = await getVerificationBranch(env, branchId);
+  const [turnstileError, branch] = await Promise.all([turnstilePromise, branchPromise]);
+  if (turnstileError) return turnstileError;
   const baseChecks = buildVerificationChecks({
     metadata,
     branch,
@@ -535,6 +536,12 @@ async function verifyPhoto(env, request) {
   const memberToken = `member_${crypto.randomUUID()}`;
 
   if (env.DB) {
+    const [memberTokenHash, ipHash, userAgentHash] = await Promise.all([
+      sha256(memberToken),
+      optionalHeaderHash(request, "cf-connecting-ip"),
+      optionalHeaderHash(request, "user-agent")
+    ]);
+
     await env.DB.prepare(
       `
         INSERT INTO verifications (
@@ -554,14 +561,14 @@ async function verifyPhoto(env, request) {
     ).bind(
       `verification_${crypto.randomUUID()}`,
       branch.id,
-      await sha256(memberToken),
+      memberTokenHash,
       now.toISOString(),
       expiresAt.toISOString(),
       takenAt.toISOString(),
       Math.round(distance),
       "gps_and_timestamp",
-      await optionalHeaderHash(request, "cf-connecting-ip"),
-      await optionalHeaderHash(request, "user-agent")
+      ipHash,
+      userAgentHash
     ).run();
   }
 
