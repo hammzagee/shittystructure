@@ -70,13 +70,15 @@ npx wrangler d1 execute shitty-structure --remote --file=./db/schema.sql
 npx wrangler d1 execute shitty-structure --remote --file=./db/seed.sql
 ```
 
-6. Validate the deploy package:
+6. Update the SEO/social URLs in `public/index.html` after you know the production domain. Search previews work best when `canonical`, `og:url`, `og:image`, and `twitter:image` use absolute `https://...` URLs instead of `/`.
+
+7. Validate the deploy package:
 
 ```bash
 npx wrangler deploy --dry-run
 ```
 
-7. Deploy:
+8. Deploy:
 
 ```bash
 npm run deploy
