@@ -114,6 +114,8 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 
 Turnstile is enforced only when `TURNSTILE_SECRET_KEY` exists. Local development can run without keys.
 
+If photo verification says `bot_check_required`, the secret key is active but the browser did not send a Turnstile token. Check that `TURNSTILE_SITE_KEY` is set in `wrangler.jsonc`, restart `npm run dev`, and make sure the Turnstile widget allows the current hostname, such as `localhost` or your production domain.
+
 ## Robots And Preview URLs
 
 The Worker serves dynamic `robots.txt` and `sitemap.xml`.

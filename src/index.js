@@ -69,11 +69,13 @@ async function withAbsoluteMetaUrls(response, url, env) {
   const imageUrl = `${url.origin}/og-image.png`;
   const robotsMeta = shouldExcludeRobots(url) ? "noindex, nofollow" : "index, follow";
   const turnstileSiteKey = String(env.TURNSTILE_SITE_KEY || "");
+  const turnstileRequired = env.TURNSTILE_SECRET_KEY ? "true" : "false";
   const html = (await response.text())
     .replaceAll("__CANONICAL_URL__", canonicalUrl)
     .replaceAll("__OG_IMAGE_URL__", imageUrl)
     .replaceAll("__ROBOTS_META__", robotsMeta)
-    .replaceAll("__TURNSTILE_SITE_KEY__", turnstileSiteKey);
+    .replaceAll("__TURNSTILE_SITE_KEY__", turnstileSiteKey)
+    .replaceAll("__TURNSTILE_REQUIRED__", turnstileRequired);
 
   const headers = {
     ...Object.fromEntries(response.headers),

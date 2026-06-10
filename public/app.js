@@ -82,6 +82,7 @@ const translations = {
     verificationFailed: "Could not verify this photo.",
     verifyBeforePosting: "Verify as a member before publishing a report.",
     botCheckFailed: "Bot check failed. Please try again.",
+    botCheckMisconfigured: "Bot check is enabled, but the public Turnstile site key is missing.",
     whyNeeded: "Why this is needed",
     whyNeededBody: "Only verified members can post or vote, so public counts stay harder to fake. The photo is checked for recent branch visit proof and then discarded. It does not have to include a person.",
     photoHint: "Upload an original photo from your phone gallery. It can be equipment, floor, signage, lockers, or anything inside the gym. Screenshots and WhatsApp or Instagram images usually will not work.",
@@ -180,6 +181,7 @@ const translations = {
     verificationFailed: "اس تصویر سے تصدیق نہیں ہو سکی۔",
     verifyBeforePosting: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
     botCheckFailed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔",
+    botCheckMisconfigured: "بوٹ چیک فعال ہے، مگر عوامی Turnstile site key موجود نہیں۔",
     whyNeeded: "یہ کیوں ضروری ہے",
     whyNeededBody: "صرف تصدیق شدہ اراکین رپورٹ یا ووٹ کر سکیں گے، اس لیے عوامی اعداد و شمار کو جعلی بنانا مشکل ہوگا۔ تصویر حالیہ برانچ دورے کے ثبوت کے لیے جانچی جاتی ہے اور پھر حذف کر دی جاتی ہے۔ اس میں کسی شخص کا ہونا ضروری نہیں۔",
     photoHint: "فون گیلری سے اصل تصویر شامل کریں۔ یہ مشین، فرش، سائن بورڈ، لاکرز، یا جم کے اندر کسی بھی چیز کی تصویر ہو سکتی ہے۔ اسکرین شاٹس اور واٹس ایپ یا انسٹاگرام کی تصاویر عموماً کام نہیں کرتیں۔",
@@ -235,6 +237,7 @@ const branchLabels = {
 };
 
 const turnstileSiteKey = document.querySelector("meta[name='turnstile-site-key']")?.content.trim() || "";
+const turnstileRequired = document.querySelector("meta[name='turnstile-required']")?.content === "true";
 
 const state = {
   branches: [],
@@ -502,6 +505,11 @@ async function submitIssue(event) {
   }
 
   const form = new FormData(elements.issueForm);
+  if (turnstileRequired && !turnstileEnabled()) {
+    alert(t("botCheckMisconfigured"));
+    return;
+  }
+
   const turnstileToken = await getTurnstileToken().catch(() => "");
   if (turnstileEnabled() && !turnstileToken) {
     alert(t("botCheckFailed"));
@@ -561,6 +569,13 @@ async function vote(event) {
 
   button.disabled = true;
   button.textContent = t("counted");
+
+  if (turnstileRequired && !turnstileEnabled()) {
+    button.disabled = false;
+    button.textContent = originalText;
+    alert(t("botCheckMisconfigured"));
+    return;
+  }
 
   const turnstileToken = await getTurnstileToken().catch(() => "");
   if (turnstileEnabled() && !turnstileToken) {
@@ -624,6 +639,11 @@ async function submitVerification(event) {
 
   try {
     const form = new FormData();
+    if (turnstileRequired && !turnstileEnabled()) {
+      updatePhotoStatus("error", t("botCheckMisconfigured"));
+      return;
+    }
+
     const turnstileToken = await getTurnstileToken().catch(() => "");
     if (turnstileEnabled() && !turnstileToken) {
       updatePhotoStatus("error", t("botCheckFailed"));
