@@ -76,6 +76,7 @@ const translations = {
     noPhotoSelected: "No photo selected",
     selectedPhoto: "Selected:",
     photoRequired: "Add a recent original gym photo first.",
+    photoTooLarge: "Photo is too large. Use an original image under 8 MB.",
     photoReady: "Photo selected. Ready to check.",
     verificationChecking: "Checking photo...",
     verificationSuccess: "Verified. You can now post and vote.",
@@ -194,6 +195,7 @@ const translations = {
     noPhotoSelected: "ابھی تصویر منتخب نہیں ہوئی",
     selectedPhoto: "منتخب تصویر:",
     photoRequired: "پہلے جم کی حالیہ اصل تصویر شامل کریں۔",
+    photoTooLarge: "تصویر بہت بڑی ہے۔ 8 MB سے کم اصل تصویر استعمال کریں۔",
     photoReady: "تصویر منتخب ہو گئی۔ اب اسے جانچا جا سکتا ہے۔",
     verificationChecking: "تصویر جانچی جا رہی ہے...",
     verificationSuccess: "تصدیق ہو گئی۔ اب آپ رپورٹ یا ووٹ کر سکتے ہیں۔",
@@ -278,6 +280,12 @@ const turnstileSiteKey = document.querySelector("meta[name='turnstile-site-key']
 const turnstileRequired = document.querySelector("meta[name='turnstile-required']")?.content === "true";
 const focusBranchSlug = "gulberg";
 
+// Only the EXIF header lives in the first ~64 KB of a JPEG/HEIC.
+// Sending a 512 KB slice instead of the full file cuts upload size by ~16×
+// on an 8 MB photo, which is typically the largest share of end-to-end latency.
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // original file limit (client-side check)
+const EXIF_SLICE_BYTES = 512 * 1024;     // enough to cover EXIF in any JPEG or HEIC
+
 const state = {
   branches: [],
   issues: [],
@@ -287,6 +295,7 @@ const state = {
     expires_at: null
   },
   verificationChecks: null,
+  exifSlicePromise: null,    // pre-read 512 KB EXIF slice on file select
   pendingTurnstile: null,
   turnstileLoadPromise: null,
   turnstileTokenPromise: null,
@@ -346,6 +355,10 @@ async function init() {
   elements.verifyPhotoInput.addEventListener("change", () => {
     state.verificationChecks = null;
     renderVerificationDetails(state.verificationChecks);
+    const file = elements.verifyPhotoInput.files?.[0];
+    // Pre-read the EXIF header slice in the background while the user
+    // reads the UI — it will be ready (or nearly ready) by submit time.
+    state.exifSlicePromise = file ? prereadExifSlice(file) : null;
     updatePhotoStatus();
     prefetchTurnstileToken();
   });
@@ -674,9 +687,16 @@ function toggleDisplayName() {
 async function submitVerification(event) {
   event.preventDefault();
 
-  if (!elements.verifyPhotoInput.files?.[0]) {
+  const originalFile = elements.verifyPhotoInput.files?.[0];
+  if (!originalFile) {
     updatePhotoStatus("error");
     elements.verifyPhotoInput.focus();
+    return;
+  }
+
+  // Instant client-side rejection — no network round-trip needed.
+  if (originalFile.size > MAX_PHOTO_BYTES) {
+    updatePhotoStatus("error", t("photoTooLarge"));
     return;
   }
 
@@ -690,20 +710,27 @@ async function submitVerification(event) {
   renderVerificationDetails(state.verificationChecks);
 
   try {
-    const form = new FormData();
     if (turnstileRequired && !turnstileEnabled()) {
       updatePhotoStatus("error", t("botCheckMisconfigured"));
       return;
     }
 
-    const turnstileToken = await getTurnstileToken().catch(() => "");
+    // Resolve turnstile token and EXIF slice in parallel — both may already
+    // be in-flight from when the user selected the photo.
+    const [turnstileToken, photoBlob] = await Promise.all([
+      getTurnstileToken().catch(() => ""),
+      state.exifSlicePromise || prereadExifSlice(originalFile)
+    ]);
+
     if (turnstileEnabled() && !turnstileToken) {
       updatePhotoStatus("error", t("botCheckFailed"));
       return;
     }
 
+    const form = new FormData();
     form.set("branch_id", elements.verifyBranch.value);
-    form.set("photo", elements.verifyPhotoInput.files[0]);
+    // Send the EXIF slice blob — same filename, fraction of the upload size.
+    form.set("photo", photoBlob || originalFile.slice(0, EXIF_SLICE_BYTES), originalFile.name);
     form.set("turnstile_token", turnstileToken);
 
     const response = await fetch("/api/verify-photo", {
@@ -734,6 +761,17 @@ async function submitVerification(event) {
     submitButton.disabled = false;
     submitButton.textContent = originalText;
   }
+}
+
+// Read the first EXIF_SLICE_BYTES of a file as a Blob.
+// JPEG EXIF is always in the first APP1 segment (typically < 64 KB).
+// HEIC metadata boxes (meta/iinf/iloc) live near the file start too.
+// 512 KB is a very safe ceiling for any phone-captured JPEG or HEIC.
+function prereadExifSlice(file) {
+  return file.slice(0, EXIF_SLICE_BYTES).arrayBuffer().then(
+    (buf) => new Blob([buf], { type: file.type || "image/jpeg" }),
+    () => null  // fallback: fetch() will read the slice itself at upload time
+  );
 }
 
 function updatePhotoStatus(tone = "neutral", message = "") {

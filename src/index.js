@@ -5,7 +5,10 @@ const jsonHeaders = {
 
 const focusBranchSlug = "gulberg";
 const focusBranchId = "branch_gulberg";
-const maxPhotoBytes = 8 * 1024 * 1024;
+// Client sends a 512 KB EXIF slice, not the full photo.
+// 600 KB gives a small margin while still blocking abuse from non-browser clients.
+// The user-facing error still references 8 MB (the original file limit).
+const maxUploadBytes = 600 * 1024;
 const defaultPhotoMaxAgeDays = 14;
 const defaultVerificationValidDays = 30;
 
@@ -460,7 +463,7 @@ async function verifyPhoto(env, request) {
     return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.", request, {}, emptyVerificationChecks(branchId));
   }
 
-  if (photo.size > maxPhotoBytes) {
+  if (photo.size > maxUploadBytes) {
     return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request, {}, emptyVerificationChecks(branchId));
   }
 
