@@ -1,0 +1,15 @@
+{
+  "name": "shitty-structure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute shitty-structure --local --file=./db/schema.sql",
+    "db:seed": "wrangler d1 execute shitty-structure --local --file=./db/seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.20.0"
+  }
+}

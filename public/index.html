@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Shitty Structure</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" data-i18n="tagline">Independent member feedback board</p>
+        <h1>Shitty Structure</h1>
+      </div>
+      <div class="actions">
+        <div class="locale-switch" aria-label="Language">
+          <button class="locale-option active" type="button" data-locale="en">EN</button>
+          <button class="locale-option" type="button" data-locale="ur">اردو</button>
+        </div>
+        <button class="ghost-button" id="verifyButton" type="button" data-i18n="verifyCta">Verify to Vote</button>
+        <button class="primary-button" id="reportButton" type="button" data-i18n="reportCta">Report an Issue</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="notice" aria-label="Disclaimer">
+        <strong data-i18n="disclaimerTitle">Not affiliated with Structure Health & Fitness.</strong>
+        <span data-i18n="disclaimerBody">This is a member-run board for verified gym member issues.</span>
+        <span class="focus-note" data-i18n="focusBranchNote">Currently focused on Gulberg branch only.</span>
+      </section>
+
+      <section class="stats-grid" aria-label="At-a-glance stats">
+        <article class="stat">
+          <span data-i18n="statIssues">Verified issues, 30 days</span>
+          <strong id="issueCount">0</strong>
+        </article>
+        <article class="stat">
+          <span data-i18n="statVotes">Total verified upvotes</span>
+          <strong id="voteCount">0</strong>
+        </article>
+        <article class="stat">
+          <span data-i18n="statCategory">Most reported category</span>
+          <strong id="topCategory">-</strong>
+        </article>
+        <article class="stat">
+          <span data-i18n="statBranch">Focus branch</span>
+          <strong id="topBranch">-</strong>
+        </article>
+      </section>
+
+      <section class="dashboard">
+        <div class="panel issues-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow" data-i18n="topIssues">Top issues</p>
+              <h2 data-i18n="verifiedReports">Verified member reports</h2>
+            </div>
+            <div class="filters" aria-label="Dashboard filters">
+              <label class="branch-filter-field">
+                <span data-i18n="branch">Branch</span>
+                <select id="branchFilter"></select>
+              </label>
+              <label>
+                <span data-i18n="category">Category</span>
+                <select id="categoryFilter">
+                  <option value="all" data-i18n="allCategories">All categories</option>
+                  <option value="Management" data-category-label="Management">Management</option>
+                  <option value="Staff" data-category-label="Staff">Staff</option>
+                  <option value="Facilities" data-category-label="Facilities">Facilities</option>
+                  <option value="Billing" data-category-label="Billing">Billing</option>
+                  <option value="Safety" data-category-label="Safety">Safety</option>
+                  <option value="Cleanliness" data-category-label="Cleanliness">Cleanliness</option>
+                  <option value="Other" data-category-label="Other">Other</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div id="issuesList" class="issues-list" aria-live="polite"></div>
+        </div>
+
+        <aside class="side-column">
+          <section class="panel">
+            <p class="eyebrow" data-i18n="staffMentions">Staff mentions</p>
+            <h2 data-i18n="repeatedRoles">Repeated roles or names</h2>
+            <div id="staffMentions" class="mention-list"></div>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow" data-i18n="recentActivity">Recent activity</p>
+            <h2 data-i18n="latestChanges">Latest changes</h2>
+            <div id="activityList" class="activity-list"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="explain-section" aria-labelledby="why-heading">
+        <div class="about-panel">
+          <p class="eyebrow" data-i18n="whyEyebrow">Why verification exists</p>
+          <h2 id="why-heading" data-i18n="whyHeading">The Gulberg board is public, but posting and voting should come from real members.</h2>
+          <p data-i18n="whyBody">
+            Verification is a trust check. It helps keep the issue count from being inflated by outsiders,
+            fake accounts, or repeat votes while still letting members report anonymously by default.
+          </p>
+          <div class="proof-steps" aria-label="Verification summary">
+            <div>
+              <strong>1</strong>
+              <span data-i18n="proofOne">Pick the branch you visited.</span>
+            </div>
+            <div>
+              <strong>2</strong>
+              <span data-i18n="proofTwo">Upload a recent original gym photo.</span>
+            </div>
+            <div>
+              <strong>3</strong>
+              <span data-i18n="proofThree">The system checks date and approximate place, then discards the photo.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-block" aria-label="Frequently asked questions">
+          <div class="section-heading">
+            <p class="eyebrow">FAQ</p>
+            <h2 data-i18n="faqHeading">What this is and what it is not</h2>
+          </div>
+
+          <div class="faq-grid">
+            <details open>
+              <summary data-i18n="faqOfficialQ">Is this official?</summary>
+              <p data-i18n="faqOfficialA">No. This is an independent member-run board and is not affiliated with, endorsed by, or operated by Structure Health & Fitness.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqPhotoQ">Why do you need a photo?</summary>
+              <p data-i18n="faqPhotoA">The photo is only used as proof that a person recently visited the selected branch. It reduces fake reports and duplicate voting.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqStoreQ">Do you store the photo?</summary>
+              <p data-i18n="faqStoreA">No. The plan is to check the photo metadata in memory and discard the original image immediately after verification.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqAnonymousQ">Can I stay anonymous?</summary>
+              <p data-i18n="faqAnonymousA">Yes. Reports are anonymous by default. If someone wants their name shown, they can choose that while posting.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqUnverifiedQ">Can I report without being verified?</summary>
+              <p data-i18n="faqUnverifiedA">For launch, no. Verification is required before publishing a report or voting. This keeps public counts credible while still letting the report appear anonymous.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqFocusQ">What should reports focus on?</summary>
+              <p data-i18n="faqFocusA">Reports should describe observable gym issues: facilities, billing, cleanliness, safety, staff behavior, or management problems. Threats and private personal details do not belong here.</p>
+            </details>
+
+            <details>
+              <summary data-i18n="faqPhotoFailQ">What if my photo does not work?</summary>
+              <p data-i18n="faqPhotoFailA">Screenshots and images saved through WhatsApp or Instagram often lose the metadata needed for verification. An original phone-gallery photo has the best chance of working.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="reportDialog">
+      <form method="dialog" class="dialog-form" id="issueForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" data-i18n="newReport">New report</p>
+            <h2 data-i18n="reportTitle">Report an Issue</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="reportDialog" type="button" aria-label="Close">x</button>
+        </div>
+
+        <div class="dialog-scroll">
+          <p class="demo-note" data-i18n="demoNote">Verify first, then publish your report. Reports stay anonymous by default.</p>
+
+          <label>
+            <span data-i18n="titleLabel">Title</span>
+            <input name="title" maxlength="120" required placeholder="Short, specific title" data-i18n-placeholder="titlePlaceholder">
+          </label>
+
+          <label>
+            <span data-i18n="descriptionLabel">Description</span>
+            <textarea name="body" rows="5" required placeholder="Describe what happened. Avoid insults, threats, or private personal details." data-i18n-placeholder="descriptionPlaceholder"></textarea>
+          </label>
+
+          <div class="form-grid">
+            <label>
+              <span data-i18n="branch">Branch</span>
+              <select name="branch_id" id="issueBranch" required></select>
+            </label>
+            <label>
+              <span data-i18n="category">Category</span>
+              <select name="category" required>
+                <option value="Management" data-category-label="Management">Management</option>
+                <option value="Staff" data-category-label="Staff">Staff</option>
+                <option value="Facilities" data-category-label="Facilities">Facilities</option>
+                <option value="Billing" data-category-label="Billing">Billing</option>
+                <option value="Safety" data-category-label="Safety">Safety</option>
+                <option value="Cleanliness" data-category-label="Cleanliness">Cleanliness</option>
+                <option value="Other" data-category-label="Other">Other</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span data-i18n="staffName">Staff name</span>
+              <input name="staff_name" maxlength="80" placeholder="Optional" data-i18n-placeholder="optional">
+            </label>
+            <label>
+              <span data-i18n="staffRole">Staff role</span>
+              <input name="staff_role" maxlength="80" placeholder="Optional" data-i18n-placeholder="optional">
+            </label>
+          </div>
+
+          <label class="toggle-row">
+            <input type="checkbox" name="is_anonymous" checked>
+            <span data-i18n="postAnonymously">Post anonymously</span>
+          </label>
+
+          <label id="displayNameField" class="hidden">
+            <span data-i18n="displayName">Display name</span>
+            <input name="display_name" maxlength="80" placeholder="Shown publicly" data-i18n-placeholder="shownPublicly">
+          </label>
+        </div>
+
+        <menu class="dialog-actions">
+          <button class="ghost-button" data-close-dialog="reportDialog" type="button" data-i18n="cancel">Cancel</button>
+          <button class="primary-button" id="submitIssue" value="default" type="submit" data-i18n="publishIssue">Publish Issue</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="verifyDialog">
+      <form class="dialog-form" id="verifyForm" novalidate>
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" data-i18n="memberVerification">Member verification</p>
+            <h2 data-i18n="verifyTitle">Verify to Post or Vote</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="verifyDialog" type="button" aria-label="Close">x</button>
+        </div>
+
+        <div class="dialog-scroll">
+          <label>
+            <span data-i18n="branch">Branch</span>
+            <select id="verifyBranch"></select>
+          </label>
+
+          <div class="photo-field">
+            <span class="field-label" data-i18n="photoLabel">Recent original gym photo</span>
+            <label class="photo-picker" id="photoPicker" for="verifyPhotoInput" role="button" tabindex="0" aria-describedby="photoPickerStatus">
+              <span class="photo-picker-icon" aria-hidden="true">+</span>
+              <span class="photo-picker-copy">
+                <strong data-i18n="photoPickerTitle">Choose photo from gallery or camera</strong>
+                <small data-i18n="photoPickerMeta">Original photo only</small>
+              </span>
+            </label>
+            <input class="visually-hidden-file" id="verifyPhotoInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
+            <span class="photo-picker-status" id="photoPickerStatus" data-i18n="noPhotoSelected" aria-live="polite">No photo selected</span>
+          </div>
+
+          <div class="help-text">
+            <strong data-i18n="whyNeeded">Why this is needed</strong>
+            <span data-i18n="whyNeededBody">Only verified members can post or vote, so public counts stay harder to fake. The photo is checked for recent branch visit proof and then discarded.</span>
+          </div>
+
+          <p class="help-text subtle" data-i18n="photoHint">Upload an original photo from your phone gallery. Screenshots and WhatsApp or Instagram images usually will not work.</p>
+        </div>
+
+        <menu class="dialog-actions">
+          <button class="ghost-button" data-close-dialog="verifyDialog" type="button" data-i18n="cancel">Cancel</button>
+          <button class="primary-button" value="default" type="submit" data-i18n="checkPhoto">Check Photo</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
