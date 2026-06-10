@@ -80,6 +80,13 @@ const translations = {
     verificationChecking: "Checking photo...",
     verificationSuccess: "Verified. You can now post and vote.",
     verificationFailed: "Could not verify this photo.",
+    extractedMetadata: "What we checked",
+    extractedBranch: "Branch",
+    extractedPhotoTaken: "Photo taken",
+    extractedDistance: "Distance from branch",
+    extractedMaxDistance: "Allowed radius",
+    extractedMetadataStatus: "Metadata status",
+    gpsAndTimestamp: "GPS and timestamp found",
     verifyBeforePosting: "Verify as a member before publishing a report.",
     botCheckFailed: "Bot check failed. Please try again.",
     botCheckMisconfigured: "Bot check is enabled, but the public Turnstile site key is missing.",
@@ -179,6 +186,13 @@ const translations = {
     verificationChecking: "تصویر جانچی جا رہی ہے...",
     verificationSuccess: "تصدیق ہو گئی۔ اب آپ رپورٹ یا ووٹ کر سکتے ہیں۔",
     verificationFailed: "اس تصویر سے تصدیق نہیں ہو سکی۔",
+    extractedMetadata: "ہم نے کیا چیک کیا",
+    extractedBranch: "برانچ",
+    extractedPhotoTaken: "تصویر کا وقت",
+    extractedDistance: "برانچ سے فاصلہ",
+    extractedMaxDistance: "اجازت شدہ حد",
+    extractedMetadataStatus: "میٹا ڈیٹا کی حالت",
+    gpsAndTimestamp: "GPS اور وقت موجود ہے",
     verifyBeforePosting: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
     botCheckFailed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔",
     botCheckMisconfigured: "بوٹ چیک فعال ہے، مگر عوامی Turnstile site key موجود نہیں۔",
@@ -247,6 +261,7 @@ const state = {
     verified: false,
     expires_at: null
   },
+  verificationChecks: null,
   pendingTurnstile: null,
   turnstileWidgetId: null,
   locale: translations[localStorage.getItem("locale")] ? localStorage.getItem("locale") : "en"
@@ -273,6 +288,7 @@ const elements = {
   photoPicker: document.querySelector("#photoPicker"),
   verifyPhotoInput: document.querySelector("#verifyPhotoInput"),
   photoPickerStatus: document.querySelector("#photoPickerStatus"),
+  verificationDetails: document.querySelector("#verificationDetails"),
   displayNameField: document.querySelector("#displayNameField"),
   turnstileWidget: document.querySelector("#turnstileWidget"),
   localeButtons: document.querySelectorAll("[data-locale]")
@@ -299,7 +315,11 @@ async function init() {
     button.addEventListener("click", () => closeDialog(button.dataset.closeDialog));
   });
   elements.photoPicker.addEventListener("keydown", handlePhotoPickerKeydown);
-  elements.verifyPhotoInput.addEventListener("change", updatePhotoStatus);
+  elements.verifyPhotoInput.addEventListener("change", () => {
+    state.verificationChecks = null;
+    renderVerificationDetails(state.verificationChecks);
+    updatePhotoStatus();
+  });
   elements.issueForm.addEventListener("submit", submitIssue);
   elements.verifyForm.addEventListener("submit", submitVerification);
   elements.issueForm.is_anonymous.addEventListener("change", toggleDisplayName);
@@ -389,6 +409,7 @@ function applyLocale() {
   }
 
   updatePhotoStatus();
+  renderVerificationDetails(state.verificationChecks);
 }
 
 async function refreshDashboard() {
@@ -636,8 +657,11 @@ async function submitVerification(event) {
   const submitButton = elements.verifyForm.querySelector("button[type='submit']");
   const originalText = submitButton.textContent;
   submitButton.disabled = true;
+  elements.verifyForm.classList.add("is-loading");
   submitButton.textContent = t("verificationChecking");
   updatePhotoStatus("neutral", t("verificationChecking"));
+  state.verificationChecks = null;
+  renderVerificationDetails(state.verificationChecks);
 
   try {
     const form = new FormData();
@@ -675,7 +699,10 @@ async function submitVerification(event) {
       expires_at: data.expires_at
     };
     updatePhotoStatus("success", t("verificationSuccess"));
+    state.verificationChecks = data.checks || null;
+    renderVerificationDetails(state.verificationChecks);
   } finally {
+    elements.verifyForm.classList.remove("is-loading");
     submitButton.disabled = false;
     submitButton.textContent = originalText;
   }
@@ -692,6 +719,34 @@ function updatePhotoStatus(tone = "neutral", message = "") {
     : tone === "error"
       ? t("photoRequired")
     : t("noPhotoSelected"));
+}
+
+function renderVerificationDetails(checks) {
+  elements.verificationDetails.replaceChildren();
+  elements.verificationDetails.classList.toggle("hidden", !checks);
+  if (!checks) return;
+
+  const title = document.createElement("strong");
+  title.textContent = t("extractedMetadata");
+
+  const list = document.createElement("dl");
+  const rows = [
+    [t("extractedBranch"), translateBranch(checks.branch)],
+    [t("extractedPhotoTaken"), formatDateTime(checks.photo_taken_at)],
+    [t("extractedDistance"), formatMeters(checks.distance_from_branch_meters)],
+    [t("extractedMaxDistance"), formatMeters(checks.max_distance_meters)],
+    [t("extractedMetadataStatus"), checks.metadata_status === "gps_and_timestamp" ? t("gpsAndTimestamp") : checks.metadata_status]
+  ];
+
+  rows.forEach(([label, value]) => {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value || "-";
+    list.append(term, detail);
+  });
+
+  elements.verificationDetails.append(title, list);
 }
 
 async function refreshVerificationStatus() {
@@ -835,6 +890,21 @@ function relativeDate(value) {
   const diff = Date.now() - new Date(value).getTime();
   const days = Math.max(1, Math.round(diff / 86400000));
   return state.locale === "ur" ? `${days} ${t("daysAgo")}` : `${days}${t("daysAgo")}`;
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat(state.locale === "ur" ? "ur-PK" : "en-PK", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function formatMeters(value) {
+  const meters = Number(value);
+  return Number.isFinite(meters) ? `${meters}m` : "-";
 }
 
 function translateCategory(category) {
