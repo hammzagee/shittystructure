@@ -22,6 +22,7 @@
   "vars": {
     "PHOTO_MAX_AGE_DAYS": "14",
     "VERIFICATION_VALID_DAYS": "30",
+    "TURNSTILE_SITE_KEY": "",
   },
   "observability": {
     "enabled": true,

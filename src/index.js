@@ -45,13 +45,91 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      return robotsTxt(url);
+    }
+
+    if (request.method === "GET" && url.pathname === "/sitemap.xml") {
+      return sitemapXml(url);
+    }
+
     if (url.pathname.startsWith("/api/")) {
       return handleApi(request, env, url);
     }
 
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    return response.headers.get("content-type")?.includes("text/html")
+      ? withAbsoluteMetaUrls(response, url, env)
+      : response;
   }
 };
+
+async function withAbsoluteMetaUrls(response, url, env) {
+  const canonicalUrl = `${url.origin}/`;
+  const imageUrl = `${url.origin}/og-image.png`;
+  const robotsMeta = shouldExcludeRobots(url) ? "noindex, nofollow" : "index, follow";
+  const turnstileSiteKey = String(env.TURNSTILE_SITE_KEY || "");
+  const html = (await response.text())
+    .replaceAll("__CANONICAL_URL__", canonicalUrl)
+    .replaceAll("__OG_IMAGE_URL__", imageUrl)
+    .replaceAll("__ROBOTS_META__", robotsMeta)
+    .replaceAll("__TURNSTILE_SITE_KEY__", turnstileSiteKey);
+
+  const headers = {
+    ...Object.fromEntries(response.headers),
+    "content-type": "text/html; charset=utf-8"
+  };
+  if (shouldExcludeRobots(url)) {
+    headers["x-robots-tag"] = "noindex, nofollow";
+  }
+
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
+function robotsTxt(url) {
+  const body = shouldExcludeRobots(url)
+    ? "User-agent: *\nDisallow: /\n"
+    : "User-agent: *\nAllow: /\nSitemap: " + `${url.origin}/sitemap.xml\n`;
+
+  return new Response(body, {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=3600"
+    }
+  });
+}
+
+function sitemapXml(url) {
+  const body = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${url.origin}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+`;
+
+  return new Response(body, {
+    headers: {
+      "content-type": "application/xml; charset=utf-8",
+      "cache-control": "public, max-age=3600"
+    }
+  });
+}
+
+function shouldExcludeRobots(url) {
+  const hostname = url.hostname.toLowerCase();
+
+  return hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".trycloudflare.com");
+}
 
 async function handleApi(request, env, url) {
   if (request.method === "OPTIONS") {
@@ -180,6 +258,9 @@ async function getIssue(env, id) {
 }
 
 async function createIssue(env, input, request) {
+  const turnstileError = await requireTurnstile(env, request, input?.turnstile_token);
+  if (turnstileError) return turnstileError;
+
   const verification = await getActiveVerification(env, getMemberToken(request));
   if (!verification) {
     return apiError("verification_required", "Verify as a member before publishing a report.", 401);
@@ -246,6 +327,10 @@ async function createIssue(env, input, request) {
 }
 
 async function voteOnIssue(env, issueId, request) {
+  const input = await optionalJson(request);
+  const turnstileError = await requireTurnstile(env, request, input.turnstile_token);
+  if (turnstileError) return turnstileError;
+
   const verification = await getActiveVerification(env, getMemberToken(request));
   if (!verification) {
     return apiError("verification_required", "Verify as a member before voting.", 401);
@@ -281,6 +366,9 @@ async function voteOnIssue(env, issueId, request) {
 
 async function verifyPhoto(env, request) {
   const form = await request.formData();
+  const turnstileError = await requireTurnstile(env, request, form.get("turnstile_token"));
+  if (turnstileError) return turnstileError;
+
   const photo = form.get("photo");
   const branchId = String(form.get("branch_id") || focusBranchId);
 
@@ -802,6 +890,50 @@ async function optionalHeaderHash(request, headerName) {
 
 function getMemberToken(request) {
   return request.headers.get("x-member-token") || "";
+}
+
+async function optionalJson(request) {
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) return {};
+
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+async function requireTurnstile(env, request, token) {
+  const secret = String(env.TURNSTILE_SECRET_KEY || "");
+  if (!secret) return null;
+
+  if (!token) {
+    return apiError("bot_check_required", "Bot check is required. Please try again.", 403);
+  }
+
+  const payload = new FormData();
+  payload.set("secret", secret);
+  payload.set("response", String(token));
+  payload.set("idempotency_key", crypto.randomUUID());
+
+  const remoteIp = request.headers.get("cf-connecting-ip");
+  if (remoteIp) {
+    payload.set("remoteip", remoteIp);
+  }
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: payload
+  });
+
+  if (!response.ok) {
+    return apiError("bot_check_unavailable", "Bot check is unavailable. Please try again.", 503);
+  }
+
+  const result = await response.json();
+  if (result.success) return null;
+
+  return apiError("bot_check_failed", "Bot check failed. Please try again.", 403);
 }
 
 function apiError(status, message, httpStatus = 400, extra = {}) {

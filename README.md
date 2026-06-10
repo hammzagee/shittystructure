@@ -70,7 +70,7 @@ npx wrangler d1 execute shitty-structure --remote --file=./db/schema.sql
 npx wrangler d1 execute shitty-structure --remote --file=./db/seed.sql
 ```
 
-6. Update the SEO/social URLs in `public/index.html` after you know the production domain. Search previews work best when `canonical`, `og:url`, `og:image`, and `twitter:image` use absolute `https://...` URLs instead of `/`.
+6. The Worker rewrites `canonical`, `og:url`, `og:image`, and `twitter:image` to the deployed request origin. After custom-domain setup, re-run a social preview validator against the production URL.
 
 7. Validate the deploy package:
 
@@ -92,10 +92,41 @@ npm run deploy
 - `ASSETS`: static frontend assets from `public`.
 - `PHOTO_MAX_AGE_DAYS`: maximum accepted photo age. Default is `14`.
 - `VERIFICATION_VALID_DAYS`: member token validity period. Default is `30`.
+- `TURNSTILE_SITE_KEY`: public Cloudflare Turnstile widget site key.
+
+## Turnstile Bot Protection
+
+The app uses Cloudflare Turnstile in silent mode (`execution: execute`, `appearance: interaction-only`) for verification, report posting, and voting.
+
+1. Create a Turnstile widget in Cloudflare.
+2. Add your production domain to the widget. Add any temporary testing host only while needed.
+3. Put the public site key in `wrangler.jsonc`:
+
+```jsonc
+"TURNSTILE_SITE_KEY": "your-public-site-key"
+```
+
+4. Store the secret key as a Worker secret:
+
+```bash
+npx wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+Turnstile is enforced only when `TURNSTILE_SECRET_KEY` exists. Local development can run without keys.
+
+## Robots And Preview URLs
+
+The Worker serves dynamic `robots.txt` and `sitemap.xml`.
+
+- Production/custom domains are indexable and include a sitemap reference.
+- Localhost and `*.trycloudflare.com` tunnel URLs return `Disallow: /`.
+- Tunnel/dev HTML also gets `noindex, nofollow` via both `<meta name="robots">` and `X-Robots-Tag`.
 
 ## Current Routes
 
 - `/` dashboard
+- `/robots.txt`
+- `/sitemap.xml`
 - `/api/branches`
 - `/api/issues`
 - `/api/issues/:id`

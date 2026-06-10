@@ -43,6 +43,16 @@ const translations = {
     faqFocusA: "Reports should describe observable gym issues: facilities, billing, cleanliness, safety, staff behavior, or management problems. Threats and private personal details do not belong here.",
     faqPhotoFailQ: "What if my photo does not work?",
     faqPhotoFailA: "Screenshots and images saved through WhatsApp or Instagram often lose the metadata needed for verification. An original phone-gallery photo has the best chance of working.",
+    policyEyebrow: "Intent & privacy",
+    policyHeading: "Built for transparency, not fights.",
+    intentTitle: "Why this exists",
+    intentBody: "This board is meant to make recurring gym issues visible in one place so they can be resolved. The goal is transparency and constructive pressure, not personal attacks, drama, or endless arguing.",
+    privacyTitle: "What is stored",
+    privacyBody: "Reports, votes, branch choice, verification time, expiry time, photo timestamp, approximate distance from the branch, and hashed technical signals such as member token, IP, and user agent may be stored.",
+    photoPrivacyTitle: "What is not stored",
+    photoPrivacyBody: "The original verification photo is checked in memory and discarded. Names are optional, reports are anonymous by default, and the server stores only a hash of the member token.",
+    conductTitle: "How to use it",
+    conductBody: "Post observable issues, avoid private personal details, threats, insults, or claims you cannot support, and use the board to help fix problems before they turn into arguments.",
     newReport: "New report",
     reportTitle: "Report an Issue",
     demoNote: "Verify first, then publish your report. Reports stay anonymous by default.",
@@ -71,6 +81,7 @@ const translations = {
     verificationSuccess: "Verified. You can now post and vote.",
     verificationFailed: "Could not verify this photo.",
     verifyBeforePosting: "Verify as a member before publishing a report.",
+    botCheckFailed: "Bot check failed. Please try again.",
     whyNeeded: "Why this is needed",
     whyNeededBody: "Only verified members can post or vote, so public counts stay harder to fake. The photo is checked for recent branch visit proof and then discarded. It does not have to include a person.",
     photoHint: "Upload an original photo from your phone gallery. It can be equipment, floor, signage, lockers, or anything inside the gym. Screenshots and WhatsApp or Instagram images usually will not work.",
@@ -130,6 +141,16 @@ const translations = {
     faqFocusA: "رپورٹس نظر آنے والے جم مسائل پر ہونی چاہئیں: سہولیات، فیس، صفائی، حفاظت، اسٹاف کا رویہ، یا انتظامی مسائل۔ دھمکیاں اور نجی ذاتی معلومات یہاں نہیں ہونی چاہئیں۔",
     faqPhotoFailQ: "اگر تصویر کام نہ کرے تو؟",
     faqPhotoFailA: "اسکرین شاٹس اور واٹس ایپ یا انسٹاگرام سے محفوظ تصاویر میں اکثر مطلوبہ معلومات نہیں رہتیں۔ فون گیلری کی اصل تصویر کے کام کرنے کے امکانات بہتر ہوتے ہیں۔",
+    policyEyebrow: "مقصد اور پرائیویسی",
+    policyHeading: "یہ شفافیت کے لیے ہے، لڑائی کے لیے نہیں۔",
+    intentTitle: "یہ کیوں بنایا گیا ہے",
+    intentBody: "اس بورڈ کا مقصد بار بار آنے والے جم مسائل کو ایک جگہ واضح کرنا ہے تاکہ انہیں حل کیا جا سکے۔ مقصد شفافیت اور مثبت دباؤ ہے، ذاتی حملے، ڈرامہ، یا بے فائدہ بحث نہیں۔",
+    privacyTitle: "کیا محفوظ ہو سکتا ہے",
+    privacyBody: "رپورٹس، ووٹس، منتخب برانچ، تصدیق کا وقت، ختم ہونے کا وقت، تصویر کا وقت، برانچ سے اندازاً فاصلہ، اور ہیش شدہ تکنیکی معلومات جیسے ممبر ٹوکن، آئی پی، اور یوزر ایجنٹ محفوظ ہو سکتے ہیں۔",
+    photoPrivacyTitle: "کیا محفوظ نہیں کیا جاتا",
+    photoPrivacyBody: "اصل تصدیقی تصویر صرف عارضی طور پر میموری میں چیک ہوتی ہے اور پھر ضائع کر دی جاتی ہے۔ نام اختیاری ہے، رپورٹس عام طور پر نام کے بغیر ہوتی ہیں، اور سرور صرف ممبر ٹوکن کا ہیش محفوظ کرتا ہے۔",
+    conductTitle: "اسے کیسے استعمال کریں",
+    conductBody: "صرف نظر آنے والے مسائل لکھیں، نجی ذاتی معلومات، دھمکیاں، گالیاں، یا ایسی باتیں نہ لکھیں جن کا سہارا نہ ہو، اور اسے مسائل حل کرنے کے لیے استعمال کریں تاکہ بات بحث یا لڑائی تک نہ پہنچے۔",
     newReport: "نئی رپورٹ",
     reportTitle: "مسئلہ رپورٹ کریں",
     demoNote: "پہلے تصدیق کریں، پھر رپورٹ شائع کریں۔ رپورٹس عام طور پر نام کے بغیر رہتی ہیں۔",
@@ -158,6 +179,7 @@ const translations = {
     verificationSuccess: "تصدیق ہو گئی۔ اب آپ رپورٹ یا ووٹ کر سکتے ہیں۔",
     verificationFailed: "اس تصویر سے تصدیق نہیں ہو سکی۔",
     verifyBeforePosting: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
+    botCheckFailed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔",
     whyNeeded: "یہ کیوں ضروری ہے",
     whyNeededBody: "صرف تصدیق شدہ اراکین رپورٹ یا ووٹ کر سکیں گے، اس لیے عوامی اعداد و شمار کو جعلی بنانا مشکل ہوگا۔ تصویر حالیہ برانچ دورے کے ثبوت کے لیے جانچی جاتی ہے اور پھر حذف کر دی جاتی ہے۔ اس میں کسی شخص کا ہونا ضروری نہیں۔",
     photoHint: "فون گیلری سے اصل تصویر شامل کریں۔ یہ مشین، فرش، سائن بورڈ، لاکرز، یا جم کے اندر کسی بھی چیز کی تصویر ہو سکتی ہے۔ اسکرین شاٹس اور واٹس ایپ یا انسٹاگرام کی تصاویر عموماً کام نہیں کرتیں۔",
@@ -212,6 +234,8 @@ const branchLabels = {
   }
 };
 
+const turnstileSiteKey = document.querySelector("meta[name='turnstile-site-key']")?.content.trim() || "";
+
 const state = {
   branches: [],
   issues: [],
@@ -220,6 +244,8 @@ const state = {
     verified: false,
     expires_at: null
   },
+  pendingTurnstile: null,
+  turnstileWidgetId: null,
   locale: translations[localStorage.getItem("locale")] ? localStorage.getItem("locale") : "en"
 };
 
@@ -245,6 +271,7 @@ const elements = {
   verifyPhotoInput: document.querySelector("#verifyPhotoInput"),
   photoPickerStatus: document.querySelector("#photoPickerStatus"),
   displayNameField: document.querySelector("#displayNameField"),
+  turnstileWidget: document.querySelector("#turnstileWidget"),
   localeButtons: document.querySelectorAll("[data-locale]")
 };
 
@@ -475,6 +502,12 @@ async function submitIssue(event) {
   }
 
   const form = new FormData(elements.issueForm);
+  const turnstileToken = await getTurnstileToken().catch(() => "");
+  if (turnstileEnabled() && !turnstileToken) {
+    alert(t("botCheckFailed"));
+    return;
+  }
+
   const payload = {
     title: form.get("title"),
     body: form.get("body"),
@@ -483,7 +516,8 @@ async function submitIssue(event) {
     staff_name: form.get("staff_name"),
     staff_role: form.get("staff_role"),
     is_anonymous: form.get("is_anonymous") === "on",
-    display_name: form.get("display_name")
+    display_name: form.get("display_name"),
+    turnstile_token: turnstileToken
   };
 
   const response = await fetch("/api/issues", {
@@ -504,7 +538,8 @@ async function submitIssue(event) {
       updatePhotoStatus("error", data.message || t("verifyBeforePosting"));
       return;
     }
-    throw new Error(data.message || `Request failed: /api/issues`);
+    alert(data.message || t("botCheckFailed"));
+    return;
   }
 
   elements.issueForm.reset();
@@ -527,9 +562,21 @@ async function vote(event) {
   button.disabled = true;
   button.textContent = t("counted");
 
+  const turnstileToken = await getTurnstileToken().catch(() => "");
+  if (turnstileEnabled() && !turnstileToken) {
+    button.disabled = false;
+    button.textContent = originalText;
+    alert(t("botCheckFailed"));
+    return;
+  }
+
   const response = await fetch(`/api/issues/${button.dataset.issueId}/vote`, {
     method: "POST",
-    headers: { "x-member-token": getStoredMemberToken() }
+    headers: {
+      "content-type": "application/json",
+      "x-member-token": getStoredMemberToken()
+    },
+    body: JSON.stringify({ turnstile_token: turnstileToken })
   });
 
   if (!response.ok) {
@@ -538,6 +585,9 @@ async function vote(event) {
       clearStoredVerification();
       openDialog(elements.verifyDialog);
       updatePhotoStatus("error", data.message || t("verifyBeforePosting"));
+    }
+    if (response.status === 403) {
+      alert(data.message || t("botCheckFailed"));
     }
     button.disabled = false;
     button.textContent = originalText;
@@ -574,8 +624,15 @@ async function submitVerification(event) {
 
   try {
     const form = new FormData();
+    const turnstileToken = await getTurnstileToken().catch(() => "");
+    if (turnstileEnabled() && !turnstileToken) {
+      updatePhotoStatus("error", t("botCheckFailed"));
+      return;
+    }
+
     form.set("branch_id", elements.verifyBranch.value);
     form.set("photo", elements.verifyPhotoInput.files[0]);
+    form.set("turnstile_token", turnstileToken);
 
     const response = await fetch("/api/verify-photo", {
       method: "POST",
@@ -643,6 +700,88 @@ function clearStoredVerification() {
   localStorage.removeItem("memberToken");
   localStorage.removeItem("verificationExpiresAt");
   state.verification = { verified: false, expires_at: null };
+}
+
+function turnstileEnabled() {
+  return Boolean(turnstileSiteKey && !turnstileSiteKey.includes("__"));
+}
+
+async function getTurnstileToken() {
+  if (!turnstileEnabled()) return "";
+
+  const turnstile = await waitForTurnstile();
+  const widgetId = ensureTurnstileWidget(turnstile);
+
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      state.pendingTurnstile = null;
+      reject(new Error("Turnstile timed out"));
+    }, 15000);
+
+    state.pendingTurnstile = {
+      resolve: (token) => {
+        window.clearTimeout(timeout);
+        resolve(token);
+      },
+      reject: (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      }
+    };
+
+    turnstile.reset(widgetId);
+    turnstile.execute(widgetId);
+  });
+}
+
+function ensureTurnstileWidget(turnstile) {
+  if (state.turnstileWidgetId !== null) return state.turnstileWidgetId;
+
+  state.turnstileWidgetId = turnstile.render(elements.turnstileWidget, {
+    sitekey: turnstileSiteKey,
+    execution: "execute",
+    appearance: "interaction-only",
+    callback: (token) => {
+      const pending = state.pendingTurnstile;
+      state.pendingTurnstile = null;
+      pending?.resolve(token);
+    },
+    "error-callback": () => {
+      const pending = state.pendingTurnstile;
+      state.pendingTurnstile = null;
+      pending?.reject(new Error("Turnstile failed"));
+    },
+    "expired-callback": () => {
+      const pending = state.pendingTurnstile;
+      state.pendingTurnstile = null;
+      pending?.reject(new Error("Turnstile expired"));
+    },
+    "timeout-callback": () => {
+      const pending = state.pendingTurnstile;
+      state.pendingTurnstile = null;
+      pending?.reject(new Error("Turnstile timed out"));
+    }
+  });
+
+  return state.turnstileWidgetId;
+}
+
+function waitForTurnstile() {
+  return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      if (window.turnstile?.render && window.turnstile?.execute) {
+        window.clearInterval(interval);
+        resolve(window.turnstile);
+        return;
+      }
+
+      if (Date.now() - startedAt > 10000) {
+        window.clearInterval(interval);
+        reject(new Error("Turnstile did not load"));
+      }
+    }, 50);
+  });
 }
 
 async function safeJson(response) {

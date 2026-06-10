@@ -587,7 +587,8 @@ dialog::backdrop {
 }
 
 .about-panel,
-.faq-block {
+.faq-block,
+.policy-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -656,6 +657,10 @@ html[lang="ur"] .dialog-form h2 {
   padding: 18px;
 }
 
+.policy-panel {
+  padding: 18px;
+}
+
 .section-heading {
   margin-bottom: 14px;
 }
@@ -664,6 +669,34 @@ html[lang="ur"] .dialog-form h2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.policy-grid article {
+  min-height: 150px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbf9;
+}
+
+.policy-grid h3 {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.policy-grid p {
+  margin: 10px 0 0;
+  color: #40504a;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 details {
@@ -747,6 +780,13 @@ html[lang="ur"] .proof-steps span {
   display: none;
 }
 
+.turnstile-slot {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+}
+
 .dialog-scroll > .hidden {
   display: none;
 }
@@ -778,7 +818,8 @@ html[lang="ur"] .proof-steps span {
 
   .stats-grid,
   .dashboard,
-  .explain-section {
+  .explain-section,
+  .policy-grid {
     grid-template-columns: 1fr;
   }
 
@@ -831,6 +872,10 @@ html[lang="ur"] .proof-steps span {
 
   .faq-grid {
     grid-template-columns: 1fr;
+  }
+
+  .policy-grid article {
+    min-height: 0;
   }
 
   .stat {

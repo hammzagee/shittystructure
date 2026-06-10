@@ -6,20 +6,22 @@
     <title>Shitty Structure | Verified Structure Gym Member Reports</title>
     <meta name="description" content="Independent verified member reports for Structure Health & Fitness Gulberg. See top gym issues, staff mentions, and verified member support.">
     <meta name="keywords" content="Structure gym, Structure Health and Fitness, Structure Gulberg, Lahore gym issues, verified gym member reports">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="__ROBOTS_META__">
     <meta name="theme-color" content="#236452">
-    <link rel="canonical" href="/">
+    <link rel="canonical" href="__CANONICAL_URL__">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="application-name" content="Shitty Structure">
     <meta name="apple-mobile-web-app-title" content="Shitty Structure">
+    <meta name="turnstile-site-key" content="__TURNSTILE_SITE_KEY__">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Shitty Structure">
     <meta property="og:title" content="Shitty Structure | Verified Structure Gym Member Reports">
     <meta property="og:description" content="A member-run board for verified Structure Health & Fitness Gulberg reports, issues, and upvotes.">
-    <meta property="og:url" content="/">
-    <meta property="og:image" content="/og-image.svg">
-    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:url" content="__CANONICAL_URL__">
+    <meta property="og:image" content="__OG_IMAGE_URL__">
+    <meta property="og:image:secure_url" content="__OG_IMAGE_URL__">
+    <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Shitty Structure verified member reports for Structure Health & Fitness Gulberg">
@@ -27,12 +29,14 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Shitty Structure | Verified Structure Gym Member Reports">
     <meta name="twitter:description" content="A member-run board for verified Structure Health & Fitness Gulberg reports, issues, and upvotes.">
-    <meta name="twitter:image" content="/og-image.svg">
+    <meta name="twitter:image" content="__OG_IMAGE_URL__">
     <meta name="twitter:image:alt" content="Shitty Structure verified member reports for Structure Health & Fitness Gulberg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://challenges.cloudflare.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -144,6 +148,35 @@
             </div>
           </div>
         </div>
+
+        <section class="policy-panel" aria-labelledby="policy-heading">
+          <div class="section-heading">
+            <p class="eyebrow" data-i18n="policyEyebrow">Intent & privacy</p>
+            <h2 id="policy-heading" data-i18n="policyHeading">Built for transparency, not fights.</h2>
+          </div>
+
+          <div class="policy-grid">
+            <article>
+              <h3 data-i18n="intentTitle">Why this exists</h3>
+              <p data-i18n="intentBody">This board is meant to make recurring gym issues visible in one place so they can be resolved. The goal is transparency and constructive pressure, not personal attacks, drama, or endless arguing.</p>
+            </article>
+
+            <article>
+              <h3 data-i18n="privacyTitle">What is stored</h3>
+              <p data-i18n="privacyBody">Reports, votes, branch choice, verification time, expiry time, photo timestamp, approximate distance from the branch, and hashed technical signals such as member token, IP, and user agent may be stored.</p>
+            </article>
+
+            <article>
+              <h3 data-i18n="photoPrivacyTitle">What is not stored</h3>
+              <p data-i18n="photoPrivacyBody">The original verification photo is checked in memory and discarded. Names are optional, reports are anonymous by default, and the server stores only a hash of the member token.</p>
+            </article>
+
+            <article>
+              <h3 data-i18n="conductTitle">How to use it</h3>
+              <p data-i18n="conductBody">Post observable issues, avoid private personal details, threats, insults, or claims you cannot support, and use the board to help fix problems before they turn into arguments.</p>
+            </article>
+          </div>
+        </section>
 
         <div class="faq-block" aria-label="Frequently asked questions">
           <div class="section-heading">
@@ -306,6 +339,7 @@
       </form>
     </dialog>
 
+    <div id="turnstileWidget" class="turnstile-slot" aria-hidden="true"></div>
     <script src="/app.js" type="module"></script>
   </body>
 </html>
