@@ -9,6 +9,20 @@ const maxPhotoBytes = 8 * 1024 * 1024;
 const defaultPhotoMaxAgeDays = 14;
 const defaultVerificationValidDays = 30;
 
+const htmlContentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' https://challenges.cloudflare.com",
+  "connect-src 'self' https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com",
+  "img-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join("; ");
+
 const apiMessages = {
   en: {
     verification_required_report: "Verify as a member before publishing a report.",
@@ -17,7 +31,7 @@ const apiMessages = {
     photo_required: "Add a recent original gym photo first.",
     wrong_branch: "Verification is currently open for Gulberg branch only.",
     photo_too_large: "Photo is too large. Use an original image under 8 MB.",
-    unsupported_format: "For this first version, upload an original JPEG/JPG photo with EXIF metadata.",
+    unsupported_format: "Upload an original JPEG/JPG or iPhone HEIC/HEIF photo with EXIF metadata.",
     missing_exif: "This photo does not include EXIF metadata. Try an original photo from your phone gallery.",
     missing_timestamp: "This photo is missing the original capture time.",
     photo_not_recent: "Photo must be from the last {maxAgeDays} days.",
@@ -35,7 +49,7 @@ const apiMessages = {
     photo_required: "پہلے جم کی حالیہ اصل تصویر شامل کریں۔",
     wrong_branch: "تصدیق فی الحال صرف گلبرگ برانچ کے لیے کھلی ہے۔",
     photo_too_large: "تصویر بہت بڑی ہے۔ 8 MB سے کم اصل تصویر استعمال کریں۔",
-    unsupported_format: "اس پہلے ورژن کے لیے EXIF metadata والی اصل JPEG/JPG تصویر اپ لوڈ کریں۔",
+    unsupported_format: "EXIF metadata والی اصل JPEG/JPG یا iPhone HEIC/HEIF تصویر اپ لوڈ کریں۔",
     missing_exif: "اس تصویر میں EXIF metadata موجود نہیں۔ فون گیلری سے اصل تصویر دوبارہ آزمائیں۔",
     missing_timestamp: "اس تصویر میں اصل کھینچنے کا وقت موجود نہیں۔",
     photo_not_recent: "تصویر پچھلے {maxAgeDays} دنوں کے اندر کی ہونی چاہیے۔",
@@ -118,7 +132,8 @@ async function withAbsoluteMetaUrls(response, url, env) {
 
   const headers = {
     ...Object.fromEntries(response.headers),
-    "content-type": "text/html; charset=utf-8"
+    "content-type": "text/html; charset=utf-8",
+    ...securityHeaders(url, { html: true })
   };
   if (shouldExcludeRobots(url)) {
     headers["x-robots-tag"] = "noindex, nofollow";
@@ -139,7 +154,8 @@ function robotsTxt(url) {
   return new Response(body, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
-      "cache-control": "public, max-age=3600"
+      "cache-control": "public, max-age=3600",
+      ...securityHeaders(url)
     }
   });
 }
@@ -158,7 +174,8 @@ function sitemapXml(url) {
   return new Response(body, {
     headers: {
       "content-type": "application/xml; charset=utf-8",
-      "cache-control": "public, max-age=3600"
+      "cache-control": "public, max-age=3600",
+      ...securityHeaders(url)
     }
   });
 }
@@ -170,6 +187,26 @@ function shouldExcludeRobots(url) {
     hostname === "127.0.0.1" ||
     hostname.endsWith(".localhost") ||
     hostname.endsWith(".trycloudflare.com");
+}
+
+function securityHeaders(url, options = {}) {
+  const headers = {
+    "cross-origin-opener-policy": "same-origin",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), geolocation=(), microphone=()"
+  };
+
+  if (options.html) {
+    headers["content-security-policy"] = htmlContentSecurityPolicy;
+  }
+
+  if (url.protocol === "https:") {
+    headers["strict-transport-security"] = "max-age=31536000; includeSubDomains; preload";
+  }
+
+  return headers;
 }
 
 async function handleApi(request, env, url) {
@@ -422,42 +459,48 @@ async function verifyPhoto(env, request) {
   }
 
   if (branchId !== focusBranchId) {
-    return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.", request);
+    return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.", request, {}, emptyVerificationChecks(branchId));
   }
 
   if (photo.size > maxPhotoBytes) {
-    return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request);
+    return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request, {}, emptyVerificationChecks(branchId));
   }
 
   const buffer = await photo.arrayBuffer();
-  const metadata = readJpegExif(buffer);
+  const metadata = readImageMetadata(buffer);
+  const takenAt = parseExifDate(metadata.dateTimeOriginal || metadata.dateTimeDigitized || metadata.dateTime);
+  const branch = await getVerificationBranch(env, branchId);
+  const baseChecks = buildVerificationChecks({
+    metadata,
+    branch,
+    branchId,
+    takenAt
+  });
 
   if (!metadata.supported) {
-    return verificationError("unsupported_format", "For this first version, upload an original JPEG/JPG photo with EXIF metadata.", request);
+    return verificationError("unsupported_format", "Upload an original JPEG/JPG or iPhone HEIC/HEIF photo with EXIF metadata.", request, {}, baseChecks);
   }
 
   if (!metadata.hasExif) {
-    return verificationError("missing_exif", "This photo does not include EXIF metadata. Try an original photo from your phone gallery.", request);
+    return verificationError("missing_exif", "This photo does not include EXIF metadata. Try an original photo from your phone gallery.", request, {}, baseChecks);
   }
 
-  const takenAt = parseExifDate(metadata.dateTimeOriginal || metadata.dateTimeDigitized || metadata.dateTime);
   if (!takenAt) {
-    return verificationError("missing_timestamp", "This photo is missing the original capture time.", request);
+    return verificationError("missing_timestamp", "This photo is missing the original capture time.", request, {}, baseChecks);
   }
 
   const maxAgeDays = numberFromEnv(env.PHOTO_MAX_AGE_DAYS, defaultPhotoMaxAgeDays);
   const oldestAllowed = Date.now() - maxAgeDays * 86400000;
   if (takenAt.getTime() < oldestAllowed || takenAt.getTime() > Date.now() + 3600000) {
-    return verificationError("photo_not_recent", `Photo must be from the last ${maxAgeDays} days.`, request, { maxAgeDays });
+    return verificationError("photo_not_recent", `Photo must be from the last ${maxAgeDays} days.`, request, { maxAgeDays }, baseChecks);
   }
 
   if (metadata.latitude == null || metadata.longitude == null) {
-    return verificationError("missing_location", "This photo is missing location metadata. Check that camera location is enabled and use the original photo.", request);
+    return verificationError("missing_location", "This photo is missing location metadata. Check that camera location is enabled and use the original photo.", request, {}, baseChecks);
   }
 
-  const branch = await getVerificationBranch(env, branchId);
   if (!branch) {
-    return verificationError("branch_not_found", "Verification branch is not available right now.", request);
+    return verificationError("branch_not_found", "Verification branch is not available right now.", request, {}, baseChecks);
   }
 
   const distance = distanceMeters(
@@ -467,13 +510,22 @@ async function verifyPhoto(env, request) {
     metadata.longitude
   );
   const maxDistance = Number(branch.radius_meters || 220);
+  const checks = buildVerificationChecks({
+    metadata,
+    branch,
+    branchId,
+    takenAt,
+    distance,
+    maxDistance
+  });
 
   if (distance > maxDistance) {
     return verificationError(
       "outside_branch",
       `Photo location is about ${Math.round(distance)}m from Gulberg. It needs to be within ${maxDistance}m.`,
       request,
-      { distance: Math.round(distance), maxDistance }
+      { distance: Math.round(distance), maxDistance },
+      checks
     );
   }
 
@@ -520,13 +572,7 @@ async function verifyPhoto(env, request) {
       status: "verified",
       member_token: memberToken,
       expires_at: expiresAt.toISOString(),
-      checks: {
-        branch: branch.name,
-        photo_taken_at: takenAt.toISOString(),
-        distance_from_branch_meters: Math.round(distance),
-        max_distance_meters: maxDistance,
-        metadata_status: "gps_and_timestamp"
-      }
+      checks
     }
   };
 }
@@ -548,15 +594,61 @@ async function getVerificationBranch(env, branchId) {
   ).bind(branchId, focusBranchSlug).first();
 }
 
-function verificationError(status, message, request, params = {}) {
+function verificationError(status, message, request, params = {}, checks = null) {
   return {
     status: 400,
     body: {
       verified: false,
       status,
-      message: localizedMessage(status, message, request, params)
+      message: localizedMessage(status, message, request, params),
+      ...(checks ? { checks } : {})
     }
   };
+}
+
+function emptyVerificationChecks(branchId = focusBranchId) {
+  return {
+    branch_id: branchId,
+    branch: branchId === focusBranchId ? "Gulberg" : null,
+    supported_image: null,
+    supported_jpeg: null,
+    format: "unknown",
+    exif_found: null,
+    timestamp_found: null,
+    gps_found: null,
+    photo_taken_at: null,
+    distance_from_branch_meters: null,
+    max_distance_meters: null,
+    metadata_status: "not_checked"
+  };
+}
+
+function buildVerificationChecks({ metadata, branch, branchId, takenAt, distance = null, maxDistance = null }) {
+  const gpsFound = metadata.latitude != null && metadata.longitude != null;
+
+  return {
+    branch_id: branch?.id || branchId,
+    branch: branch?.name || (branchId === focusBranchId ? "Gulberg" : null),
+    supported_image: Boolean(metadata.supported),
+    supported_jpeg: Boolean(metadata.supported),
+    format: metadata.format || "unknown",
+    exif_found: Boolean(metadata.hasExif),
+    timestamp_found: Boolean(takenAt),
+    gps_found: gpsFound,
+    photo_taken_at: takenAt ? takenAt.toISOString() : null,
+    distance_from_branch_meters: distance == null ? null : Math.round(distance),
+    max_distance_meters: maxDistance == null ? Number(branch?.radius_meters || 220) : maxDistance,
+    metadata_status: metadataStatus(metadata, takenAt, distance, maxDistance)
+  };
+}
+
+function metadataStatus(metadata, takenAt, distance, maxDistance) {
+  if (!metadata.supported) return "unsupported_file";
+  if (!metadata.hasExif) return "missing_exif";
+  if (!takenAt) return "missing_timestamp";
+  if (metadata.latitude == null || metadata.longitude == null) return "missing_gps";
+  if (distance != null && maxDistance != null && distance > maxDistance) return "outside_branch";
+  return "gps_and_timestamp";
 }
 
 async function getVerificationStatus(env, request) {
@@ -741,6 +833,31 @@ function validateIssueInput(input) {
   };
 }
 
+function readImageMetadata(buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (isJpeg(bytes)) return readJpegExif(buffer);
+  if (isHeif(bytes)) return readHeifExif(buffer);
+  return { supported: false, hasExif: false, format: "unsupported" };
+}
+
+function isJpeg(bytes) {
+  return bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8;
+}
+
+function isHeif(bytes) {
+  if (bytes.length < 12 || readAsciiBytes(bytes, 4, 4) !== "ftyp") return false;
+  const majorBrand = readAsciiBytes(bytes, 8, 4);
+  const brands = new Set(["heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs", "mif1", "msf1", "heif"]);
+  if (brands.has(majorBrand)) return true;
+
+  const ftypSize = readUint32FromBytes(bytes, 0);
+  const end = Math.min(bytes.length, ftypSize || 32);
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    if (brands.has(readAsciiBytes(bytes, offset, 4))) return true;
+  }
+  return false;
+}
+
 function readJpegExif(buffer) {
   const bytes = new Uint8Array(buffer);
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
@@ -779,6 +896,7 @@ function readJpegExif(buffer) {
     if (hasExifHeader) {
       return {
         supported: true,
+        format: "jpeg",
         hasExif: true,
         ...readTiffMetadata(buffer, segmentStart + 6, segmentEnd)
       };
@@ -787,7 +905,145 @@ function readJpegExif(buffer) {
     offset = segmentEnd;
   }
 
-  return { supported: true, hasExif: false };
+  return { supported: true, format: "jpeg", hasExif: false };
+}
+
+function readHeifExif(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const metaBox = findTopLevelBox(bytes, "meta");
+  if (!metaBox) return { supported: true, format: "heic", hasExif: false };
+
+  const metaStart = metaBox.start + metaBox.headerSize + 4; // skip FullBox version/flags
+  const metaEnd = metaBox.end;
+  const itemTypes = readHeifItemTypes(bytes, metaStart, metaEnd);
+  const exifItemIds = [...itemTypes.entries()]
+    .filter(([, type]) => type === "Exif")
+    .map(([itemId]) => itemId);
+  if (exifItemIds.length === 0) return { supported: true, format: "heic", hasExif: false };
+
+  const locations = readHeifItemLocations(bytes, metaStart, metaEnd);
+  for (const itemId of exifItemIds) {
+    const location = locations.get(itemId);
+    if (!location) continue;
+
+    for (const extent of location.extents) {
+      const extentStart = location.constructionMethod === 1
+        ? findHeifIdatPayloadStart(bytes, metaStart, metaEnd) + extent.offset
+        : location.baseOffset + extent.offset;
+      const extentEnd = extentStart + extent.length;
+      if (extentStart < 0 || extentEnd > bytes.length || extentStart >= extentEnd) continue;
+
+      const tiffOffset = findTiffHeader(bytes, extentStart, Math.min(extentEnd, extentStart + 64));
+      if (tiffOffset != null) {
+        return {
+          supported: true,
+          format: "heic",
+          hasExif: true,
+          ...readTiffMetadata(buffer, tiffOffset, extentEnd)
+        };
+      }
+    }
+  }
+
+  return { supported: true, format: "heic", hasExif: false };
+}
+
+function readHeifItemTypes(bytes, start, end) {
+  const itemTypes = new Map();
+  for (const box of childBoxes(bytes, start, end)) {
+    if (box.type !== "iinf") continue;
+
+    const version = bytes[box.start + box.headerSize];
+    let offset = box.start + box.headerSize + 4;
+    const entryCount = version === 0 ? readUint16FromBytes(bytes, offset) : readUint32FromBytes(bytes, offset);
+    offset += version === 0 ? 2 : 4;
+
+    for (let index = 0; index < entryCount; index += 1) {
+      const entry = readBox(bytes, offset, box.end);
+      if (!entry) break;
+      if (entry.type === "infe") {
+        const entryVersion = bytes[entry.start + entry.headerSize];
+        let entryOffset = entry.start + entry.headerSize + 4;
+        let itemId;
+        let itemType;
+        if (entryVersion >= 2) {
+          itemId = entryVersion === 2
+            ? readUint16FromBytes(bytes, entryOffset)
+            : readUint32FromBytes(bytes, entryOffset);
+          entryOffset += entryVersion === 2 ? 2 : 4;
+          entryOffset += 2; // item_protection_index
+          itemType = readAsciiBytes(bytes, entryOffset, 4);
+        }
+        if (itemId != null && itemType) itemTypes.set(itemId, itemType);
+      }
+      offset = entry.end;
+    }
+  }
+  return itemTypes;
+}
+
+function readHeifItemLocations(bytes, start, end) {
+  const locations = new Map();
+  for (const box of childBoxes(bytes, start, end)) {
+    if (box.type !== "iloc") continue;
+
+    const version = bytes[box.start + box.headerSize];
+    let offset = box.start + box.headerSize + 4;
+    const sizes = bytes[offset++];
+    const offsetSize = sizes >> 4;
+    const lengthSize = sizes & 0x0f;
+    const baseSizes = bytes[offset++];
+    const baseOffsetSize = baseSizes >> 4;
+    const indexSize = version === 1 || version === 2 ? baseSizes & 0x0f : 0;
+    const itemCount = version < 2 ? readUint16FromBytes(bytes, offset) : readUint32FromBytes(bytes, offset);
+    offset += version < 2 ? 2 : 4;
+
+    for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
+      const itemId = version < 2 ? readUint16FromBytes(bytes, offset) : readUint32FromBytes(bytes, offset);
+      offset += version < 2 ? 2 : 4;
+
+      let constructionMethod = 0;
+      if (version === 1 || version === 2) {
+        constructionMethod = readUint16FromBytes(bytes, offset) & 0x000f;
+        offset += 2;
+      }
+
+      offset += 2; // data_reference_index
+      const baseOffset = readSizedUint(bytes, offset, baseOffsetSize);
+      offset += baseOffsetSize;
+      const extentCount = readUint16FromBytes(bytes, offset);
+      offset += 2;
+
+      const extents = [];
+      for (let extentIndex = 0; extentIndex < extentCount; extentIndex += 1) {
+        if ((version === 1 || version === 2) && indexSize > 0) {
+          offset += indexSize;
+        }
+        const extentOffset = readSizedUint(bytes, offset, offsetSize);
+        offset += offsetSize;
+        const extentLength = readSizedUint(bytes, offset, lengthSize);
+        offset += lengthSize;
+        extents.push({ offset: extentOffset, length: extentLength });
+      }
+
+      locations.set(itemId, { constructionMethod, baseOffset, extents });
+    }
+  }
+  return locations;
+}
+
+function findHeifIdatPayloadStart(bytes, start, end) {
+  const idat = childBoxes(bytes, start, end).find((box) => box.type === "idat");
+  return idat ? idat.start + idat.headerSize : 0;
+}
+
+function findTiffHeader(bytes, start, end) {
+  for (let offset = start; offset + 4 <= end; offset += 1) {
+    const littleEndian = bytes[offset] === 0x49 && bytes[offset + 1] === 0x49 && bytes[offset + 2] === 0x2a && bytes[offset + 3] === 0x00;
+    const bigEndian = bytes[offset] === 0x4d && bytes[offset + 1] === 0x4d && bytes[offset + 2] === 0x00 && bytes[offset + 3] === 0x2a;
+    if (littleEndian || bigEndian) return offset;
+  }
+  return null;
 }
 
 function readTiffMetadata(buffer, tiffOffset, segmentEnd) {
@@ -1012,6 +1268,83 @@ function readAsciiAt(view, offset, length) {
     output += String.fromCharCode(view.getUint8(offset + index));
   }
   return output;
+}
+
+function readAsciiBytes(bytes, offset, length) {
+  let output = "";
+  for (let index = 0; index < length; index += 1) {
+    output += String.fromCharCode(bytes[offset + index] || 0);
+  }
+  return output;
+}
+
+function readBox(bytes, offset, end) {
+  if (offset + 8 > end) return null;
+
+  const size32 = readUint32FromBytes(bytes, offset);
+  const type = readAsciiBytes(bytes, offset + 4, 4);
+  let size = size32;
+  let headerSize = 8;
+
+  if (size32 === 1) {
+    if (offset + 16 > end) return null;
+    size = readUint64FromBytes(bytes, offset + 8);
+    headerSize = 16;
+  } else if (size32 === 0) {
+    size = end - offset;
+  }
+
+  if (type === "uuid") headerSize += 16;
+  if (size < headerSize || offset + size > end) return null;
+
+  return {
+    start: offset,
+    end: offset + size,
+    headerSize,
+    type
+  };
+}
+
+function childBoxes(bytes, start, end) {
+  const boxes = [];
+  let offset = start;
+  while (offset + 8 <= end) {
+    const box = readBox(bytes, offset, end);
+    if (!box) break;
+    boxes.push(box);
+    offset = box.end;
+  }
+  return boxes;
+}
+
+function findTopLevelBox(bytes, type) {
+  return childBoxes(bytes, 0, bytes.length).find((box) => box.type === type) || null;
+}
+
+function readSizedUint(bytes, offset, size) {
+  if (size === 0) return 0;
+  let value = 0;
+  for (let index = 0; index < size; index += 1) {
+    value = value * 256 + (bytes[offset + index] || 0);
+  }
+  return value;
+}
+
+function readUint32FromBytes(bytes, offset) {
+  return ((bytes[offset] || 0) * 0x1000000) +
+    ((bytes[offset + 1] || 0) << 16) +
+    ((bytes[offset + 2] || 0) << 8) +
+    (bytes[offset + 3] || 0);
+}
+
+function readUint16FromBytes(bytes, offset) {
+  return ((bytes[offset] || 0) << 8) + (bytes[offset + 1] || 0);
+}
+
+function readUint64FromBytes(bytes, offset) {
+  const high = readUint32FromBytes(bytes, offset);
+  const low = readUint32FromBytes(bytes, offset + 4);
+  return high * 0x100000000 + low;
 }
 
 function readUint16(view, offset, littleEndian) {

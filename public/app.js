@@ -86,7 +86,19 @@ const translations = {
     extractedDistance: "Distance from branch",
     extractedMaxDistance: "Allowed radius",
     extractedMetadataStatus: "Metadata status",
+    extractedJpeg: "Image format",
+    extractedExif: "EXIF metadata",
+    extractedTimestamp: "Timestamp",
+    extractedGps: "GPS location",
+    found: "Found",
+    missing: "Missing",
+    notChecked: "Not checked",
     gpsAndTimestamp: "GPS and timestamp found",
+    unsupportedFile: "Unsupported file type",
+    missingExifStatus: "EXIF metadata missing",
+    missingTimestampStatus: "Timestamp missing",
+    missingGpsStatus: "GPS missing",
+    outsideBranchStatus: "Outside branch radius",
     verifyBeforePosting: "Verify as a member before publishing a report.",
     botCheckFailed: "Bot check failed. Please try again.",
     botCheckMisconfigured: "Bot check is enabled, but the public Turnstile site key is missing.",
@@ -192,7 +204,19 @@ const translations = {
     extractedDistance: "برانچ سے فاصلہ",
     extractedMaxDistance: "اجازت شدہ حد",
     extractedMetadataStatus: "میٹا ڈیٹا کی حالت",
+    extractedJpeg: "تصویر کا فارمیٹ",
+    extractedExif: "EXIF metadata",
+    extractedTimestamp: "وقت",
+    extractedGps: "GPS مقام",
+    found: "موجود",
+    missing: "موجود نہیں",
+    notChecked: "چیک نہیں ہوا",
     gpsAndTimestamp: "GPS اور وقت موجود ہے",
+    unsupportedFile: "فائل کی قسم قابل قبول نہیں",
+    missingExifStatus: "EXIF metadata موجود نہیں",
+    missingTimestampStatus: "وقت موجود نہیں",
+    missingGpsStatus: "GPS موجود نہیں",
+    outsideBranchStatus: "برانچ کی حد سے باہر",
     verifyBeforePosting: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
     botCheckFailed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔",
     botCheckMisconfigured: "بوٹ چیک فعال ہے، مگر عوامی Turnstile site key موجود نہیں۔",
@@ -252,6 +276,7 @@ const branchLabels = {
 
 const turnstileSiteKey = document.querySelector("meta[name='turnstile-site-key']")?.content.trim() || "";
 const turnstileRequired = document.querySelector("meta[name='turnstile-required']")?.content === "true";
+const focusBranchSlug = "gulberg";
 
 const state = {
   branches: [],
@@ -263,6 +288,7 @@ const state = {
   },
   verificationChecks: null,
   pendingTurnstile: null,
+  turnstileLoadPromise: null,
   turnstileWidgetId: null,
   locale: translations[localStorage.getItem("locale")] ? localStorage.getItem("locale") : "en"
 };
@@ -272,7 +298,6 @@ const elements = {
   voteCount: document.querySelector("#voteCount"),
   topCategory: document.querySelector("#topCategory"),
   topBranch: document.querySelector("#topBranch"),
-  branchFilter: document.querySelector("#branchFilter"),
   categoryFilter: document.querySelector("#categoryFilter"),
   issuesList: document.querySelector("#issuesList"),
   staffMentions: document.querySelector("#staffMentions"),
@@ -298,14 +323,15 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   applyLocale();
-  await loadBranches();
-  await refreshVerificationStatus();
-  await refreshDashboard();
+  const initialData = Promise.all([
+    loadBranches(),
+    refreshVerificationStatus(),
+    refreshDashboard()
+  ]);
 
   elements.localeButtons.forEach((button) => {
     button.addEventListener("click", () => setLocale(button.dataset.locale));
   });
-  elements.branchFilter.addEventListener("change", refreshIssues);
   elements.categoryFilter.addEventListener("change", refreshIssues);
   elements.reportButton.addEventListener("click", () => openDialog(elements.reportDialog));
   elements.verifyButton.addEventListener("click", () => openDialog(elements.verifyDialog));
@@ -314,7 +340,6 @@ async function init() {
   document.querySelectorAll("[data-close-dialog]").forEach((button) => {
     button.addEventListener("click", () => closeDialog(button.dataset.closeDialog));
   });
-  elements.photoPicker.addEventListener("keydown", handlePhotoPickerKeydown);
   elements.verifyPhotoInput.addEventListener("change", () => {
     state.verificationChecks = null;
     renderVerificationDetails(state.verificationChecks);
@@ -323,6 +348,8 @@ async function init() {
   elements.issueForm.addEventListener("submit", submitIssue);
   elements.verifyForm.addEventListener("submit", submitVerification);
   elements.issueForm.is_anonymous.addEventListener("change", toggleDisplayName);
+
+  await initialData;
 }
 
 function openDialog(dialog) {
@@ -349,21 +376,19 @@ async function loadBranches() {
   const data = await getJson("/api/branches");
   state.branches = data.branches;
 
+  elements.issueBranch.replaceChildren();
+  elements.verifyBranch.replaceChildren();
+
   for (const branch of state.branches) {
-    const filterOption = new Option(translateBranch(branch.name), branch.slug);
-    filterOption.dataset.branchName = branch.name;
     const reportOption = new Option(translateBranch(branch.name), branch.id);
     reportOption.dataset.branchName = branch.name;
     const verifyOption = new Option(translateBranch(branch.name), branch.id);
     verifyOption.dataset.branchName = branch.name;
-    elements.branchFilter.append(filterOption);
     elements.issueBranch.append(reportOption);
     elements.verifyBranch.append(verifyOption);
   }
 
   if (state.branches.length === 1) {
-    elements.branchFilter.value = state.branches[0].slug;
-    elements.branchFilter.closest("label")?.classList.add("hidden");
     elements.issueBranch.value = state.branches[0].id;
     elements.verifyBranch.value = state.branches[0].id;
   }
@@ -427,7 +452,7 @@ async function refreshStats() {
 
 async function refreshIssues() {
   const params = new URLSearchParams({
-    branch: elements.branchFilter.value,
+    branch: focusBranchSlug,
     category: elements.categoryFilter.value
   });
   const data = await getJson(`/api/issues?${params.toString()}`);
@@ -639,18 +664,12 @@ function toggleDisplayName() {
   elements.displayNameField.classList.toggle("hidden", elements.issueForm.is_anonymous.checked);
 }
 
-function handlePhotoPickerKeydown(event) {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  event.preventDefault();
-  elements.verifyPhotoInput.click();
-}
-
 async function submitVerification(event) {
   event.preventDefault();
 
   if (!elements.verifyPhotoInput.files?.[0]) {
     updatePhotoStatus("error");
-    elements.photoPicker.focus();
+    elements.verifyPhotoInput.focus();
     return;
   }
 
@@ -689,6 +708,8 @@ async function submitVerification(event) {
 
     if (!response.ok || !data.verified) {
       updatePhotoStatus("error", data.message || t("verificationFailed"));
+      state.verificationChecks = data.checks || null;
+      renderVerificationDetails(state.verificationChecks);
       return;
     }
 
@@ -732,10 +753,14 @@ function renderVerificationDetails(checks) {
   const list = document.createElement("dl");
   const rows = [
     [t("extractedBranch"), translateBranch(checks.branch)],
+    [t("extractedJpeg"), formatImageFormat(checks)],
+    [t("extractedExif"), formatCheckStatus(checks.exif_found)],
+    [t("extractedTimestamp"), formatCheckStatus(checks.timestamp_found)],
+    [t("extractedGps"), formatCheckStatus(checks.gps_found)],
     [t("extractedPhotoTaken"), formatDateTime(checks.photo_taken_at)],
     [t("extractedDistance"), formatMeters(checks.distance_from_branch_meters)],
     [t("extractedMaxDistance"), formatMeters(checks.max_distance_meters)],
-    [t("extractedMetadataStatus"), checks.metadata_status === "gps_and_timestamp" ? t("gpsAndTimestamp") : checks.metadata_status]
+    [t("extractedMetadataStatus"), formatMetadataStatus(checks.metadata_status)]
   ];
 
   rows.forEach(([label, value]) => {
@@ -743,6 +768,9 @@ function renderVerificationDetails(checks) {
     term.textContent = label;
     const detail = document.createElement("dd");
     detail.textContent = value || "-";
+    if (value === t("missing") || value === t("notChecked")) {
+      detail.className = "muted";
+    }
     list.append(term, detail);
   });
 
@@ -847,8 +875,29 @@ function ensureTurnstileWidget(turnstile) {
   return state.turnstileWidgetId;
 }
 
-function waitForTurnstile() {
-  return new Promise((resolve, reject) => {
+async function waitForTurnstile() {
+  await loadTurnstileScript();
+  return window.turnstile;
+}
+
+function loadTurnstileScript() {
+  if (window.turnstile?.render && window.turnstile?.execute) {
+    return Promise.resolve();
+  }
+
+  if (state.turnstileLoadPromise) {
+    return state.turnstileLoadPromise;
+  }
+
+  state.turnstileLoadPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector("script[data-turnstile-api]");
+    if (existingScript) {
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Turnstile did not load")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
     const startedAt = Date.now();
     const interval = window.setInterval(() => {
       if (window.turnstile?.render && window.turnstile?.execute) {
@@ -862,7 +911,19 @@ function waitForTurnstile() {
         reject(new Error("Turnstile did not load"));
       }
     }, 50);
+
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+    script.dataset.turnstileApi = "true";
+    script.addEventListener("error", () => {
+      window.clearInterval(interval);
+      reject(new Error("Turnstile did not load"));
+    }, { once: true });
+    document.head.append(script);
   });
+
+  return state.turnstileLoadPromise;
 }
 
 async function safeJson(response) {
@@ -905,6 +966,33 @@ function formatDateTime(value) {
 function formatMeters(value) {
   const meters = Number(value);
   return Number.isFinite(meters) ? `${meters}m` : "-";
+}
+
+function formatCheckStatus(value) {
+  if (value === true) return t("found");
+  if (value === false) return t("missing");
+  return t("notChecked");
+}
+
+function formatImageFormat(checks) {
+  if (checks.supported_image === false || checks.supported_jpeg === false) return t("missing");
+  if (checks.format === "jpeg") return "JPEG";
+  if (checks.format === "heic") return "HEIC/HEIF";
+  if (checks.supported_image === true || checks.supported_jpeg === true) return t("found");
+  return t("notChecked");
+}
+
+function formatMetadataStatus(status) {
+  const statuses = {
+    gps_and_timestamp: t("gpsAndTimestamp"),
+    unsupported_file: t("unsupportedFile"),
+    missing_exif: t("missingExifStatus"),
+    missing_timestamp: t("missingTimestampStatus"),
+    missing_gps: t("missingGpsStatus"),
+    outside_branch: t("outsideBranchStatus"),
+    not_checked: t("notChecked")
+  };
+  return statuses[status] || status || "-";
 }
 
 function translateCategory(category) {

@@ -4,7 +4,7 @@ Independent member feedback board for Structure gym members.
 
 ## Overview
 
-This app uses a Cloudflare Worker with static assets, D1, and a plain frontend dashboard. Members verify with an original JPEG photo that has recent EXIF timestamp and GPS metadata. The photo is checked in memory and is not stored.
+This app uses a Cloudflare Worker with static assets, D1, and a plain frontend dashboard. Members verify with an original JPEG or iPhone HEIC/HEIF photo that has recent EXIF timestamp and GPS metadata. The photo is checked in memory and is not stored.
 
 After verification, the Worker returns a cryptographically random member token. The browser stores that token locally and sends it on future report and vote requests. The database stores only the token hash.
 
@@ -36,7 +36,7 @@ npm run dev
 
 1. Open the local Wrangler URL.
 2. Click **Verify to Vote**.
-3. Upload an original phone JPEG from near the Gulberg branch, taken within the last 14 days, with location metadata enabled.
+3. Upload an original phone photo from near the Gulberg branch, taken within the last 14 days, with location metadata enabled. JPEG/JPG and iPhone HEIC/HEIF are supported.
 4. After verification succeeds, publish a report from **Report an Issue**.
 5. Vote on an issue with **Have this too**.
 
@@ -137,4 +137,4 @@ The Worker serves dynamic `robots.txt` and `sitemap.xml`.
 - `/api/verify-photo`
 - `/api/verification/status`
 
-Verification checks JPEG EXIF timestamp and GPS metadata in memory, stores only a hashed member token and metadata summary, then requires the returned token for posting reports and voting.
+Verification checks JPEG or HEIC/HEIF EXIF timestamp and GPS metadata in memory, stores only a hashed member token and metadata summary, then requires the returned token for posting reports and voting.

@@ -32,12 +32,7 @@
     <meta name="twitter:description" content="A member-run board for verified Structure Health & Fitness Gulberg reports, issues, and upvotes.">
     <meta name="twitter:image" content="__OG_IMAGE_URL__">
     <meta name="twitter:image:alt" content="Shitty Structure verified member reports for Structure Health & Fitness Gulberg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://challenges.cloudflare.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -89,10 +84,6 @@
               <h2 data-i18n="verifiedReports">Verified member reports</h2>
             </div>
             <div class="filters" aria-label="Dashboard filters">
-              <label class="branch-filter-field">
-                <span data-i18n="branch">Branch</span>
-                <select id="branchFilter"></select>
-              </label>
               <label>
                 <span data-i18n="category">Category</span>
                 <select id="categoryFilter">
@@ -251,7 +242,9 @@
           <div class="form-grid">
             <label>
               <span data-i18n="branch">Branch</span>
-              <select name="branch_id" id="issueBranch" required></select>
+              <select name="branch_id" id="issueBranch" required>
+                <option value="branch_gulberg" data-branch-name="Gulberg">Gulberg</option>
+              </select>
             </label>
             <label>
               <span data-i18n="category">Category</span>
@@ -309,19 +302,21 @@
         <div class="dialog-scroll">
           <label>
             <span data-i18n="branch">Branch</span>
-            <select id="verifyBranch"></select>
+            <select id="verifyBranch">
+              <option value="branch_gulberg" data-branch-name="Gulberg">Gulberg</option>
+            </select>
           </label>
 
           <div class="photo-field">
             <span class="field-label" data-i18n="photoLabel">Recent original gym photo</span>
-            <label class="photo-picker" id="photoPicker" for="verifyPhotoInput" role="button" tabindex="0" aria-describedby="photoPickerStatus">
+            <input class="visually-hidden-file" id="verifyPhotoInput" type="file" accept="image/jpeg,image/jpg,image/heic,image/heif,.heic,.heif">
+            <label class="photo-picker" id="photoPicker" for="verifyPhotoInput" aria-describedby="photoPickerStatus">
               <span class="photo-picker-icon" aria-hidden="true">+</span>
               <span class="photo-picker-copy">
                 <strong data-i18n="photoPickerTitle">Choose photo from gallery or camera</strong>
                 <small data-i18n="photoPickerMeta">Original photo only</small>
               </span>
             </label>
-            <input class="visually-hidden-file" id="verifyPhotoInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
             <span class="photo-picker-status" id="photoPickerStatus" data-i18n="noPhotoSelected" aria-live="polite">No photo selected</span>
             <div class="metadata-panel hidden" id="verificationDetails" aria-live="polite"></div>
           </div>
