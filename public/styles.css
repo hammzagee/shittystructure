@@ -1129,6 +1129,14 @@ html[lang="ur"] .proof-steps span {
     width: 100%;
     min-height: 46px;
   }
+
+  .dialog-form.is-loading .primary-button[type="submit"] {
+    font-size: 0;
+  }
+
+  .dialog-form.is-loading .primary-button[type="submit"]::before {
+    margin-inline-end: 0;
+  }
 }
 
 @media (max-width: 360px) {
