@@ -468,7 +468,7 @@ async function verifyPhoto(env, request) {
   const branchPromise = getVerificationBranch(env, branchId);
   const buffer = await photo.arrayBuffer();
   const metadata = readImageMetadata(buffer);
-  const takenAt = parseExifDate(metadata.dateTimeOriginal || metadata.dateTimeDigitized || metadata.dateTime);
+  const takenAt = parsePhotoTakenAt(metadata);
   const [turnstileError, branch] = await Promise.all([turnstilePromise, branchPromise]);
   if (turnstileError) return turnstileError;
   const baseChecks = buildVerificationChecks({
@@ -1076,6 +1076,9 @@ function readTiffMetadata(buffer, tiffOffset, segmentEnd) {
     readIfdEntries(view, tiffOffset, pointers.exif, segmentEnd, littleEndian, (tag, value) => {
       if (tag === 0x9003) metadata.dateTimeOriginal = value;
       if (tag === 0x9004) metadata.dateTimeDigitized = value;
+      if (tag === 0x9010) metadata.offsetTime = value;
+      if (tag === 0x9011) metadata.offsetTimeOriginal = value;
+      if (tag === 0x9012) metadata.offsetTimeDigitized = value;
     });
   }
 
@@ -1086,10 +1089,14 @@ function readTiffMetadata(buffer, tiffOffset, segmentEnd) {
       if (tag === 0x0002) gps.latitude = value;
       if (tag === 0x0003) gps.longitudeRef = value;
       if (tag === 0x0004) gps.longitude = value;
+      if (tag === 0x0007) gps.timeStamp = value;
+      if (tag === 0x001d) gps.dateStamp = value;
     });
 
     metadata.latitude = gpsCoordinate(gps.latitude, gps.latitudeRef);
     metadata.longitude = gpsCoordinate(gps.longitude, gps.longitudeRef);
+    metadata.gpsTimeStamp = gps.timeStamp;
+    metadata.gpsDateStamp = gps.dateStamp;
   }
 
   return metadata;
@@ -1163,13 +1170,87 @@ function gpsCoordinate(parts, ref) {
   return ref === "S" || ref === "W" ? -coordinate : coordinate;
 }
 
-function parseExifDate(value) {
-  const match = String(value || "").match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+function parsePhotoTakenAt(metadata) {
+  return parseExifDate(metadata.dateTimeOriginal, metadata.offsetTimeOriginal) ||
+    parseExifDate(metadata.dateTimeDigitized, metadata.offsetTimeDigitized) ||
+    parseExifDate(metadata.dateTime, metadata.offsetTime) ||
+    parseGpsDateTime(metadata.gpsDateStamp, metadata.gpsTimeStamp);
+}
+
+function parseExifDate(value, offset = "") {
+  const match = String(value || "").trim().match(
+    /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:\s*([+-]\d{2}:?\d{2}|Z))?$/
+  );
   if (!match) return null;
 
-  const [, year, month, day, hour, minute, second] = match.map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const [, year, month, day, hour, minute, second, inlineOffset] = match;
+  return dateFromParts({
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    offset: inlineOffset || offset
+  });
+}
+
+function parseGpsDateTime(dateStamp, timeStamp) {
+  const dateMatch = String(dateStamp || "").trim().match(/^(\d{4}):(\d{2}):(\d{2})$/);
+  if (!dateMatch || !Array.isArray(timeStamp) || timeStamp.length < 3) return null;
+
+  const [, year, month, day] = dateMatch;
+  const [hour, minute, second] = timeStamp.map(Number);
+  return dateFromParts({
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    offset: "Z"
+  });
+}
+
+function dateFromParts({ year, month, day, hour, minute, second, offset = "" }) {
+  const values = [year, month, day, hour, minute, second].map(Number);
+  if (values.some((value) => !Number.isFinite(value))) return null;
+
+  const [parsedYear, parsedMonth, parsedDay, parsedHour, parsedMinute, parsedSecond] = values;
+  if (
+    parsedYear < 1970 ||
+    parsedMonth < 1 ||
+    parsedMonth > 12 ||
+    parsedDay < 1 ||
+    parsedDay > 31 ||
+    parsedHour < 0 ||
+    parsedHour > 23 ||
+    parsedMinute < 0 ||
+    parsedMinute > 59 ||
+    parsedSecond < 0 ||
+    parsedSecond >= 61
+  ) {
+    return null;
+  }
+
+  const normalizedOffset = normalizeExifOffset(offset);
+  const isoDate = `${padDatePart(parsedYear, 4)}-${padDatePart(parsedMonth)}-${padDatePart(parsedDay)}T${padDatePart(parsedHour)}:${padDatePart(parsedMinute)}:${padDatePart(Math.floor(parsedSecond))}`;
+  const date = normalizedOffset
+    ? new Date(`${isoDate}${normalizedOffset}`)
+    : new Date(Date.UTC(parsedYear, parsedMonth - 1, parsedDay, parsedHour, parsedMinute, parsedSecond));
+
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeExifOffset(value) {
+  const offset = String(value || "").trim();
+  if (offset === "Z") return "Z";
+  const match = offset.match(/^([+-])(\d{2}):?(\d{2})$/);
+  return match ? `${match[1]}${match[2]}:${match[3]}` : "";
+}
+
+function padDatePart(value, length = 2) {
+  return String(value).padStart(length, "0");
 }
 
 function distanceMeters(fromLatitude, fromLongitude, toLatitude, toLongitude) {
