@@ -9,6 +9,45 @@ const maxPhotoBytes = 8 * 1024 * 1024;
 const defaultPhotoMaxAgeDays = 14;
 const defaultVerificationValidDays = 30;
 
+const apiMessages = {
+  en: {
+    verification_required_report: "Verify as a member before publishing a report.",
+    verification_required_vote: "Verify as a member before voting.",
+    issue_not_found: "Issue not found for the active launch branch.",
+    photo_required: "Add a recent original gym photo first.",
+    wrong_branch: "Verification is currently open for Gulberg branch only.",
+    photo_too_large: "Photo is too large. Use an original image under 8 MB.",
+    unsupported_format: "For this first version, upload an original JPEG/JPG photo with EXIF metadata.",
+    missing_exif: "This photo does not include EXIF metadata. Try an original photo from your phone gallery.",
+    missing_timestamp: "This photo is missing the original capture time.",
+    photo_not_recent: "Photo must be from the last {maxAgeDays} days.",
+    missing_location: "This photo is missing location metadata. Check that camera location is enabled and use the original photo.",
+    branch_not_found: "Verification branch is not available right now.",
+    outside_branch: "Photo location is about {distance}m from Gulberg. It needs to be within {maxDistance}m.",
+    bot_check_required: "Bot check is required. Please try again.",
+    bot_check_unavailable: "Bot check is unavailable. Please try again.",
+    bot_check_failed: "Bot check failed. Please try again."
+  },
+  ur: {
+    verification_required_report: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
+    verification_required_vote: "ووٹ کرنے سے پہلے رکن کی تصدیق کریں۔",
+    issue_not_found: "فعال گلبرگ برانچ کے لیے یہ مسئلہ نہیں ملا۔",
+    photo_required: "پہلے جم کی حالیہ اصل تصویر شامل کریں۔",
+    wrong_branch: "تصدیق فی الحال صرف گلبرگ برانچ کے لیے کھلی ہے۔",
+    photo_too_large: "تصویر بہت بڑی ہے۔ 8 MB سے کم اصل تصویر استعمال کریں۔",
+    unsupported_format: "اس پہلے ورژن کے لیے EXIF metadata والی اصل JPEG/JPG تصویر اپ لوڈ کریں۔",
+    missing_exif: "اس تصویر میں EXIF metadata موجود نہیں۔ فون گیلری سے اصل تصویر دوبارہ آزمائیں۔",
+    missing_timestamp: "اس تصویر میں اصل کھینچنے کا وقت موجود نہیں۔",
+    photo_not_recent: "تصویر پچھلے {maxAgeDays} دنوں کے اندر کی ہونی چاہیے۔",
+    missing_location: "اس تصویر میں مقام کی معلومات موجود نہیں۔ کیمرہ location آن کریں اور اصل تصویر استعمال کریں۔",
+    branch_not_found: "تصدیق والی برانچ اس وقت دستیاب نہیں۔",
+    outside_branch: "تصویر کا مقام گلبرگ سے تقریباً {distance}m دور ہے۔ یہ {maxDistance}m کے اندر ہونا چاہیے۔",
+    bot_check_required: "بوٹ چیک ضروری ہے۔ دوبارہ کوشش کریں۔",
+    bot_check_unavailable: "بوٹ چیک دستیاب نہیں۔ دوبارہ کوشش کریں۔",
+    bot_check_failed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔"
+  }
+};
+
 const demoBranches = [
   {
     id: "branch_gulberg",
@@ -265,7 +304,9 @@ async function createIssue(env, input, request) {
 
   const verification = await getActiveVerification(env, getMemberToken(request));
   if (!verification) {
-    return apiError("verification_required", "Verify as a member before publishing a report.", 401);
+    return apiError("verification_required", "Verify as a member before publishing a report.", 401, {}, request, {
+      messageKey: "verification_required_report"
+    });
   }
 
   const issue = validateIssueInput(input);
@@ -335,7 +376,9 @@ async function voteOnIssue(env, issueId, request) {
 
   const verification = await getActiveVerification(env, getMemberToken(request));
   if (!verification) {
-    return apiError("verification_required", "Verify as a member before voting.", 401);
+    return apiError("verification_required", "Verify as a member before voting.", 401, {}, request, {
+      messageKey: "verification_required_vote"
+    });
   }
 
   if (!env.DB) {
@@ -356,7 +399,7 @@ async function voteOnIssue(env, issueId, request) {
     return apiError("issue_not_found", "Issue not found for the active launch branch.", 404, {
       issue_id: issueId,
       voted: false
-    });
+    }, request);
   }
 
   await env.DB.prepare(
@@ -375,46 +418,46 @@ async function verifyPhoto(env, request) {
   const branchId = String(form.get("branch_id") || focusBranchId);
 
   if (!photo || typeof photo.arrayBuffer !== "function") {
-    return verificationError("photo_required", "Add a recent original gym photo first.");
+    return verificationError("photo_required", "Add a recent original gym photo first.", request);
   }
 
   if (branchId !== focusBranchId) {
-    return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.");
+    return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.", request);
   }
 
   if (photo.size > maxPhotoBytes) {
-    return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.");
+    return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request);
   }
 
   const buffer = await photo.arrayBuffer();
   const metadata = readJpegExif(buffer);
 
   if (!metadata.supported) {
-    return verificationError("unsupported_format", "For this first version, upload an original JPEG/JPG photo with EXIF metadata.");
+    return verificationError("unsupported_format", "For this first version, upload an original JPEG/JPG photo with EXIF metadata.", request);
   }
 
   if (!metadata.hasExif) {
-    return verificationError("missing_exif", "This photo does not include EXIF metadata. Try an original photo from your phone gallery.");
+    return verificationError("missing_exif", "This photo does not include EXIF metadata. Try an original photo from your phone gallery.", request);
   }
 
   const takenAt = parseExifDate(metadata.dateTimeOriginal || metadata.dateTimeDigitized || metadata.dateTime);
   if (!takenAt) {
-    return verificationError("missing_timestamp", "This photo is missing the original capture time.");
+    return verificationError("missing_timestamp", "This photo is missing the original capture time.", request);
   }
 
   const maxAgeDays = numberFromEnv(env.PHOTO_MAX_AGE_DAYS, defaultPhotoMaxAgeDays);
   const oldestAllowed = Date.now() - maxAgeDays * 86400000;
   if (takenAt.getTime() < oldestAllowed || takenAt.getTime() > Date.now() + 3600000) {
-    return verificationError("photo_not_recent", `Photo must be from the last ${maxAgeDays} days.`);
+    return verificationError("photo_not_recent", `Photo must be from the last ${maxAgeDays} days.`, request, { maxAgeDays });
   }
 
   if (metadata.latitude == null || metadata.longitude == null) {
-    return verificationError("missing_location", "This photo is missing location metadata. Check that camera location is enabled and use the original photo.");
+    return verificationError("missing_location", "This photo is missing location metadata. Check that camera location is enabled and use the original photo.", request);
   }
 
   const branch = await getVerificationBranch(env, branchId);
   if (!branch) {
-    return verificationError("branch_not_found", "Verification branch is not available right now.");
+    return verificationError("branch_not_found", "Verification branch is not available right now.", request);
   }
 
   const distance = distanceMeters(
@@ -428,7 +471,9 @@ async function verifyPhoto(env, request) {
   if (distance > maxDistance) {
     return verificationError(
       "outside_branch",
-      `Photo location is about ${Math.round(distance)}m from Gulberg. It needs to be within ${maxDistance}m.`
+      `Photo location is about ${Math.round(distance)}m from Gulberg. It needs to be within ${maxDistance}m.`,
+      request,
+      { distance: Math.round(distance), maxDistance }
     );
   }
 
@@ -503,13 +548,13 @@ async function getVerificationBranch(env, branchId) {
   ).bind(branchId, focusBranchSlug).first();
 }
 
-function verificationError(status, message) {
+function verificationError(status, message, request, params = {}) {
   return {
     status: 400,
     body: {
       verified: false,
       status,
-      message
+      message: localizedMessage(status, message, request, params)
     }
   };
 }
@@ -910,7 +955,7 @@ async function requireTurnstile(env, request, token) {
   if (!secret) return null;
 
   if (!token) {
-    return apiError("bot_check_required", "Bot check is required. Please try again.", 403);
+    return apiError("bot_check_required", "Bot check is required. Please try again.", 403, {}, request);
   }
 
   const payload = new FormData();
@@ -929,25 +974,36 @@ async function requireTurnstile(env, request, token) {
   });
 
   if (!response.ok) {
-    return apiError("bot_check_unavailable", "Bot check is unavailable. Please try again.", 503);
+    return apiError("bot_check_unavailable", "Bot check is unavailable. Please try again.", 503, {}, request);
   }
 
   const result = await response.json();
   if (result.success) return null;
 
-  return apiError("bot_check_failed", "Bot check failed. Please try again.", 403);
+  return apiError("bot_check_failed", "Bot check failed. Please try again.", 403, {}, request);
 }
 
-function apiError(status, message, httpStatus = 400, extra = {}) {
+function apiError(status, message, httpStatus = 400, extra = {}, request = null, options = {}) {
   return {
     status: httpStatus,
     body: {
       ...extra,
       error: status,
       status,
-      message
+      message: localizedMessage(options.messageKey || status, message, request, options.params || {})
     }
   };
+}
+
+function localizedMessage(key, fallback, request, params = {}) {
+  const locale = localeFromRequest(request);
+  const template = apiMessages[locale]?.[key] || apiMessages.en[key] || fallback;
+  return template.replace(/\{(\w+)\}/g, (_, paramKey) => String(params[paramKey] ?? ""));
+}
+
+function localeFromRequest(request) {
+  const requested = String(request?.headers?.get("x-locale") || request?.headers?.get("accept-language") || "").toLowerCase();
+  return requested.startsWith("ur") || requested.includes("ur-pk") ? "ur" : "en";
 }
 
 function readAsciiAt(view, offset, length) {
@@ -982,6 +1038,6 @@ function corsHeaders() {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
-    "access-control-allow-headers": "content-type, x-member-token"
+    "access-control-allow-headers": "content-type, x-member-token, x-locale"
   };
 }

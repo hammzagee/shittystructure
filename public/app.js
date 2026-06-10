@@ -532,7 +532,8 @@ async function submitIssue(event) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-member-token": getStoredMemberToken()
+      "x-member-token": getStoredMemberToken(),
+      "x-locale": state.locale
     },
     body: JSON.stringify(payload)
   });
@@ -589,7 +590,8 @@ async function vote(event) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-member-token": getStoredMemberToken()
+      "x-member-token": getStoredMemberToken(),
+      "x-locale": state.locale
     },
     body: JSON.stringify({ turnstile_token: turnstileToken })
   });
@@ -656,6 +658,7 @@ async function submitVerification(event) {
 
     const response = await fetch("/api/verify-photo", {
       method: "POST",
+      headers: { "x-locale": state.locale },
       body: form
     });
     const data = await safeJson(response);
@@ -699,7 +702,10 @@ async function refreshVerificationStatus() {
   }
 
   const response = await fetch("/api/verification/status", {
-    headers: { "x-member-token": token }
+    headers: {
+      "x-member-token": token,
+      "x-locale": state.locale
+    }
   });
   const data = await safeJson(response);
   state.verification = {
