@@ -1,0 +1,17 @@
+{
+  "name": "Shitty Structure",
+  "short_name": "Structure Reports",
+  "description": "Verified Structure gym member reports for Gulberg.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#fbfcfa",
+  "theme_color": "#236452",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
