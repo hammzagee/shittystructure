@@ -47,7 +47,7 @@ const apiMessages = {
     photo_required: "Add a recent original gym photo first.",
     wrong_branch: "Verification is currently open for Gulberg branch only.",
     photo_too_large: "Photo is too large. Use an original image under 8 MB.",
-    unsupported_format: "Upload an original JPEG/JPG or iPhone HEIC/HEIF photo with EXIF metadata.",
+    unsupported_format: "Upload an original phone-gallery JPEG/JPG or HEIC/HEIF photo with EXIF metadata.",
     missing_exif: "This photo does not include EXIF metadata. Try an original photo from your phone gallery.",
     missing_timestamp: "This photo is missing the original capture time.",
     photo_not_recent: "Photo must be from the last {maxAgeDays} days.",

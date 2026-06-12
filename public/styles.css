@@ -49,6 +49,11 @@ html[lang="ur"] body {
     line-height: 1.65;
 }
 
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 button,
 input,
 select,
@@ -349,11 +354,14 @@ textarea {
     border-radius: 8px;
     background: white;
     color: var(--ink);
+    min-height: 44px;
     padding: 10px 11px;
+    font-size: 16px;
 }
 
 textarea {
     resize: vertical;
+    line-height: 1.45;
 }
 
 .issues-list {
@@ -978,7 +986,7 @@ html[lang="ur"] .proof-steps span {
 
 @media (max-width: 620px) {
     body {
-        padding-bottom: 136px;
+        padding-bottom: calc(136px + env(safe-area-inset-bottom));
     }
 
     body.modal-open,
@@ -992,7 +1000,7 @@ html[lang="ur"] .proof-steps span {
     }
 
     main {
-        padding: 14px 12px 34px;
+        padding: 14px max(12px, env(safe-area-inset-left)) 34px max(12px, env(safe-area-inset-right));
     }
 
     .filters,
@@ -1042,9 +1050,9 @@ html[lang="ur"] .proof-steps span {
     .actions {
         width: auto;
         position: fixed;
-        right: 10px;
+        right: max(10px, env(safe-area-inset-right));
         bottom: calc(10px + env(safe-area-inset-bottom));
-        left: 10px;
+        left: max(10px, env(safe-area-inset-left));
         z-index: 20;
         gap: 8px;
         padding: 10px;
@@ -1142,14 +1150,14 @@ html[lang="ur"] .proof-steps span {
         inset: auto 0 0 0;
         width: 100%;
         max-width: none;
-        max-height: min(92dvh, 760px);
+        max-height: min(92svh, 760px);
         margin: 0;
         border-radius: 12px 12px 0 0;
         overflow: hidden;
     }
 
     .dialog-form {
-        max-height: min(92dvh, 760px);
+        max-height: min(92svh, 760px);
         overflow: hidden;
         padding: 0;
         display: grid;
@@ -1193,6 +1201,21 @@ html[lang="ur"] .proof-steps span {
     .dialog-actions button {
         width: 100%;
         min-height: 46px;
+    }
+
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
+    .photo-picker {
+        min-height: 76px;
+    }
+
+    .photo-picker-copy strong,
+    .photo-picker-copy small {
+        overflow-wrap: anywhere;
     }
 
     .dialog-form.is-loading .primary-button[type="submit"] {

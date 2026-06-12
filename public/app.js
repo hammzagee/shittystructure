@@ -84,6 +84,7 @@ const translations = {
     verificationChecking: "Checking photo...",
     verificationSuccess: "Verified. You can now post and vote.",
     verificationFailed: "Could not verify this photo.",
+    unsupportedPhoto: "Use an original JPEG/JPG or HEIC/HEIF photo from your phone gallery.",
     extractedMetadata: "What we checked",
     extractedBranch: "Branch",
     extractedPhotoTaken: "Photo taken",
@@ -211,6 +212,7 @@ const translations = {
     verificationChecking: "تصویر جانچی جا رہی ہے...",
     verificationSuccess: "تصدیق ہو گئی۔ اب آپ رپورٹ یا ووٹ کر سکتے ہیں۔",
     verificationFailed: "اس تصویر سے تصدیق نہیں ہو سکی۔",
+    unsupportedPhoto: "فون گیلری سے اصل JPEG/JPG یا HEIC/HEIF تصویر استعمال کریں۔",
     extractedMetadata: "ہم نے کیا چیک کیا",
     extractedBranch: "برانچ",
     extractedPhotoTaken: "تصویر کا وقت",
@@ -746,6 +748,11 @@ async function submitVerification(event) {
     return;
   }
 
+  if (!isSupportedOriginalPhoto(originalFile)) {
+    updatePhotoStatus("error", t("unsupportedPhoto"));
+    return;
+  }
+
   const submitButton = elements.verifyForm.querySelector("button[type='submit']");
   const originalText = submitButton.textContent;
   submitButton.disabled = true;
@@ -815,6 +822,16 @@ function isHeicFile(file) {
   const type = String(file.type || "").toLowerCase();
   const name = String(file.name || "").toLowerCase();
   return type.includes("heic") || type.includes("heif") || name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+function isJpegFile(file) {
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  return type === "image/jpeg" || type === "image/jpg" || type === "image/pjpeg" || name.endsWith(".jpg") || name.endsWith(".jpeg");
+}
+
+function isSupportedOriginalPhoto(file) {
+  return isJpegFile(file) || isHeicFile(file);
 }
 
 function exifSliceSize(file) {
