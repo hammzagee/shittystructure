@@ -17,31 +17,31 @@
     <rect x="72" y="72" width="1056" height="486" rx="34" fill="#ffffff"/>
   </g>
   <g transform="translate(118 118)">
-    <text x="0" y="0" fill="#b44735" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="1">
+    <text x="0" y="0" fill="#b44735" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="1">
       INDEPENDENT MEMBER FEEDBACK BOARD
     </text>
-    <text x="0" y="110" fill="#1d2522" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900">
+    <text x="0" y="110" fill="#1d2522" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="88" font-weight="900">
       Shitty Structure
     </text>
-    <text x="0" y="182" fill="#40504a" font-family="Inter, Arial, sans-serif" font-size="36" font-weight="700">
+    <text x="0" y="182" fill="#40504a" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="36" font-weight="700">
       Verified Structure gym member reports
     </text>
-    <text x="0" y="236" fill="#40504a" font-family="Inter, Arial, sans-serif" font-size="30">
+    <text x="0" y="236" fill="#40504a" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="30">
       Gulberg branch issues, staff mentions, and upvotes.
     </text>
     <g transform="translate(0 308)">
       <rect width="206" height="54" rx="27" fill="#eef5f2"/>
-      <text x="30" y="36" fill="#143d33" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Verified</text>
+      <text x="30" y="36" fill="#143d33" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Verified</text>
       <rect x="228" width="192" height="54" rx="27" fill="#f7edda"/>
-      <text x="258" y="36" fill="#6f4b0e" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Gulberg</text>
+      <text x="258" y="36" fill="#6f4b0e" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Gulberg</text>
       <rect x="442" width="230" height="54" rx="27" fill="#eef4fb"/>
-      <text x="472" y="36" fill="#25486f" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Anonymous</text>
+      <text x="472" y="36" fill="#25486f" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Anonymous</text>
     </g>
   </g>
   <g transform="translate(860 184)">
     <rect width="188" height="188" rx="28" fill="#236452"/>
     <path d="M50 99l38 38 55-86" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="94" y="248" text-anchor="middle" fill="#143d33" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="900">
+    <text x="94" y="248" text-anchor="middle" fill="#143d33" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="26" font-weight="900">
       MEMBER-RUN
     </text>
   </g>

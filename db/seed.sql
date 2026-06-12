@@ -1,5 +1,5 @@
 INSERT OR IGNORE INTO branches (id, name, slug, city, latitude, longitude, radius_meters, is_active) VALUES
-  ('branch_gulberg', 'Gulberg', 'gulberg', 'Lahore', 31.5204, 74.3587, 220, 1),
+  ('branch_gulberg', 'Gulberg', 'gulberg', 'Lahore', 31.539389, 74.350469, 220, 1),
   ('branch_johar_town', 'Johar Town', 'johar-town', 'Lahore', 31.4697, 74.2728, 220, 0),
   ('branch_dha_lahore', 'DHA Lahore', 'dha-lahore', 'Lahore', 31.4624, 74.4090, 250, 0),
   ('branch_dha_karachi', 'DHA Karachi', 'dha-karachi', 'Karachi', 24.8042, 67.0643, 250, 0);

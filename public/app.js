@@ -4,6 +4,8 @@ const translations = {
   en: {
     tagline: "Independent member feedback board",
     verifyCta: "Verify to Vote",
+    verifiedCta: "Verified",
+    verifiedBadge: "Verified member",
     reportCta: "Report an Issue",
     disclaimerTitle: "Not affiliated with Structure Health & Fitness.",
     disclaimerBody: "This is a member-run board for verified gym member issues.",
@@ -68,6 +70,7 @@ const translations = {
     shownPublicly: "Shown publicly",
     cancel: "Cancel",
     publishIssue: "Publish Issue",
+    publishingIssue: "Publishing issue...",
     memberVerification: "Member verification",
     verifyTitle: "Verify to Post or Vote",
     photoLabel: "Recent original gym photo",
@@ -102,11 +105,16 @@ const translations = {
     outsideBranchStatus: "Outside branch radius",
     verifyBeforePosting: "Verify as a member before publishing a report.",
     botCheckFailed: "Bot check failed. Please try again.",
+    botCheckExpired: "Bot check expired or was already used. Please try again.",
+    botCheckInvalid: "Bot check token was rejected. Check that the live site key and secret key belong to the same Turnstile widget.",
+    botCheckSecretInvalid: "Bot check secret key is invalid. Update the live Turnstile secret.",
+    botCheckMissing: "Bot check did not return a token. Please refresh and try again.",
     botCheckMisconfigured: "Bot check is enabled, but the public Turnstile site key is missing.",
     whyNeeded: "Why this is needed",
     whyNeededBody: "Only verified members can post or vote, so public counts stay harder to fake. The photo is checked for recent branch visit proof and then discarded. It does not have to include a person.",
     photoHint: "Upload an original photo from your phone gallery. It can be equipment, floor, signage, lockers, or anything inside the gym. Screenshots and WhatsApp or Instagram images usually will not work.",
     checkPhoto: "Check Photo",
+    alreadyVerified: "Already verified. You can post and vote.",
     haveThisToo: "Have this too",
     counted: "Counted",
     anonymousMember: "Anonymous member",
@@ -123,6 +131,8 @@ const translations = {
   ur: {
     tagline: "اراکین کا آزاد رائے بورڈ",
     verifyCta: "تصدیق کریں",
+    verifiedCta: "تصدیق ہو چکی",
+    verifiedBadge: "تصدیق شدہ رکن",
     reportCta: "رپورٹ کریں",
     disclaimerTitle: "⁦Structure Health & Fitness⁩ سے وابستہ نہیں۔",
     disclaimerBody: "یہ تصدیق شدہ اراکین کے مسائل کے لیے ایک آزاد بورڈ ہے۔",
@@ -187,6 +197,7 @@ const translations = {
     shownPublicly: "عوامی طور پر دکھایا جائے گا",
     cancel: "منسوخ کریں",
     publishIssue: "رپورٹ شائع کریں",
+    publishingIssue: "رپورٹ شائع ہو رہی ہے...",
     memberVerification: "رکن کی تصدیق",
     verifyTitle: "رپورٹ یا ووٹ کے لیے تصدیق کریں",
     photoLabel: "جم کی حالیہ اصل تصویر",
@@ -221,11 +232,16 @@ const translations = {
     outsideBranchStatus: "برانچ کی حد سے باہر",
     verifyBeforePosting: "رپورٹ شائع کرنے سے پہلے رکن کی تصدیق کریں۔",
     botCheckFailed: "بوٹ چیک ناکام ہو گیا۔ دوبارہ کوشش کریں۔",
+    botCheckExpired: "بوٹ چیک ختم ہو گیا یا پہلے استعمال ہو چکا ہے۔ دوبارہ کوشش کریں۔",
+    botCheckInvalid: "بوٹ چیک token رد ہو گیا۔ live site key اور secret key ایک ہی Turnstile widget کے ہونے چاہئیں۔",
+    botCheckSecretInvalid: "بوٹ چیک secret key درست نہیں۔ live Turnstile secret اپ ڈیٹ کریں۔",
+    botCheckMissing: "بوٹ چیک token واپس نہیں آیا۔ صفحہ refresh کر کے دوبارہ کوشش کریں۔",
     botCheckMisconfigured: "بوٹ چیک فعال ہے، مگر عوامی Turnstile site key موجود نہیں۔",
     whyNeeded: "یہ کیوں ضروری ہے",
     whyNeededBody: "صرف تصدیق شدہ اراکین رپورٹ یا ووٹ کر سکیں گے، اس لیے عوامی اعداد و شمار کو جعلی بنانا مشکل ہوگا۔ تصویر حالیہ برانچ دورے کے ثبوت کے لیے جانچی جاتی ہے اور پھر حذف کر دی جاتی ہے۔ اس میں کسی شخص کا ہونا ضروری نہیں۔",
     photoHint: "فون گیلری سے اصل تصویر شامل کریں۔ یہ مشین، فرش، سائن بورڈ، لاکرز، یا جم کے اندر کسی بھی چیز کی تصویر ہو سکتی ہے۔ اسکرین شاٹس اور واٹس ایپ یا انسٹاگرام کی تصاویر عموماً کام نہیں کرتیں۔",
     checkPhoto: "تصویر جانچیں",
+    alreadyVerified: "آپ کی تصدیق ہو چکی ہے۔ اب آپ رپورٹ یا ووٹ کر سکتے ہیں۔",
     haveThisToo: "مجھے بھی یہ مسئلہ ہے",
     counted: "ووٹ شامل ہو گیا",
     anonymousMember: "نام ظاہر نہیں کیا گیا",
@@ -278,13 +294,15 @@ const branchLabels = {
 
 const turnstileSiteKey = document.querySelector("meta[name='turnstile-site-key']")?.content.trim() || "";
 const turnstileRequired = document.querySelector("meta[name='turnstile-required']")?.content === "true";
+const cspNonce = document.querySelector("meta[name='csp-nonce']")?.content.trim() || "";
 const focusBranchSlug = "gulberg";
 
-// Only the EXIF header lives in the first ~64 KB of a JPEG/HEIC.
-// Sending a 512 KB slice instead of the full file cuts upload size by ~16×
-// on an 8 MB photo, which is typically the largest share of end-to-end latency.
+// JPEG EXIF lives in the first APP1 segment (usually < 32 KB).
+// HEIC metadata boxes also sit near the file start, but need a little more room.
+// Sending only this slice instead of the full file is the biggest latency win on mobile.
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // original file limit (client-side check)
-const EXIF_SLICE_BYTES = 512 * 1024;     // enough to cover EXIF in any JPEG or HEIC
+const EXIF_SLICE_BYTES_JPEG = 64 * 1024;
+const EXIF_SLICE_BYTES_HEIC = 256 * 1024;
 
 const state = {
   branches: [],
@@ -295,12 +313,10 @@ const state = {
     expires_at: null
   },
   verificationChecks: null,
-  exifSlicePromise: null,    // pre-read 512 KB EXIF slice on file select
+  exifSliceBytes: EXIF_SLICE_BYTES_JPEG,
+  exifSlicePromise: null,
   pendingTurnstile: null,
   turnstileLoadPromise: null,
-  turnstileTokenPromise: null,
-  cachedTurnstileToken: null,
-  cachedTurnstileExpiresAt: 0,
   turnstileWidgetId: null,
   locale: translations[localStorage.getItem("locale")] ? localStorage.getItem("locale") : "en"
 };
@@ -316,15 +332,19 @@ const elements = {
   activityList: document.querySelector("#activityList"),
   reportButton: document.querySelector("#reportButton"),
   verifyButton: document.querySelector("#verifyButton"),
+  verificationBadge: document.querySelector("#verificationBadge"),
   reportDialog: document.querySelector("#reportDialog"),
   verifyDialog: document.querySelector("#verifyDialog"),
   issueForm: document.querySelector("#issueForm"),
   verifyForm: document.querySelector("#verifyForm"),
+  submitIssue: document.querySelector("#submitIssue"),
+  checkPhotoButton: document.querySelector("#checkPhotoButton"),
   issueBranch: document.querySelector("#issueBranch"),
   verifyBranch: document.querySelector("#verifyBranch"),
   photoPicker: document.querySelector("#photoPicker"),
   verifyPhotoInput: document.querySelector("#verifyPhotoInput"),
   photoPickerStatus: document.querySelector("#photoPickerStatus"),
+  reportFormStatus: document.querySelector("#reportFormStatus"),
   verificationDetails: document.querySelector("#verificationDetails"),
   displayNameField: document.querySelector("#displayNameField"),
   turnstileWidget: document.querySelector("#turnstileWidget"),
@@ -358,13 +378,17 @@ async function init() {
     const file = elements.verifyPhotoInput.files?.[0];
     // Pre-read the EXIF header slice in the background while the user
     // reads the UI — it will be ready (or nearly ready) by submit time.
-    state.exifSlicePromise = file ? prereadExifSlice(file) : null;
+    state.exifSliceBytes = file ? exifSliceSize(file) : EXIF_SLICE_BYTES_JPEG;
+    state.exifSlicePromise = file ? prereadExifSlice(file, state.exifSliceBytes) : null;
     updatePhotoStatus();
-    prefetchTurnstileToken();
   });
   elements.issueForm.addEventListener("submit", submitIssue);
   elements.verifyForm.addEventListener("submit", submitVerification);
   elements.issueForm.is_anonymous.addEventListener("change", toggleDisplayName);
+
+  if (turnstileEnabled()) {
+    prepareTurnstile();
+  }
 
   await initialData;
 }
@@ -372,8 +396,8 @@ async function init() {
 function openDialog(dialog) {
   dialog.showModal();
   syncModalState();
-  if (dialog === elements.verifyDialog && turnstileEnabled()) {
-    loadTurnstileScript().catch(() => {});
+  if (turnstileEnabled()) {
+    prepareTurnstile();
   }
 }
 
@@ -455,6 +479,7 @@ function applyLocale() {
 
   updatePhotoStatus();
   renderVerificationDetails(state.verificationChecks);
+  renderVerificationState();
 }
 
 async function refreshDashboard() {
@@ -562,6 +587,7 @@ function renderActivity() {
 
 async function submitIssue(event) {
   event.preventDefault();
+  clearReportFormStatus();
 
   if (!getStoredMemberToken()) {
     elements.reportDialog.close();
@@ -570,58 +596,72 @@ async function submitIssue(event) {
     return;
   }
 
-  const form = new FormData(elements.issueForm);
   if (turnstileRequired && !turnstileEnabled()) {
-    alert(t("botCheckMisconfigured"));
+    showReportFormStatus(t("botCheckMisconfigured"));
     return;
   }
 
-  const turnstileToken = await getTurnstileToken().catch(() => "");
-  if (turnstileEnabled() && !turnstileToken) {
-    alert(t("botCheckFailed"));
+  if (!elements.issueForm.reportValidity()) {
     return;
   }
 
-  const payload = {
-    title: form.get("title"),
-    body: form.get("body"),
-    branch_id: form.get("branch_id"),
-    category: form.get("category"),
-    staff_name: form.get("staff_name"),
-    staff_role: form.get("staff_role"),
-    is_anonymous: form.get("is_anonymous") === "on",
-    display_name: form.get("display_name"),
-    turnstile_token: turnstileToken
-  };
+  const submitButton = elements.submitIssue;
+  const originalText = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = t("publishingIssue");
 
-  const response = await fetch("/api/issues", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-member-token": getStoredMemberToken(),
-      "x-locale": state.locale
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const data = await safeJson(response);
-    if (response.status === 401) {
-      clearStoredVerification();
-      elements.reportDialog.close();
-      openDialog(elements.verifyDialog);
-      updatePhotoStatus("error", data.message || t("verifyBeforePosting"));
+  try {
+    const turnstileToken = await getTurnstileTokenForSubmit().catch(() => "");
+    if (turnstileEnabled() && !turnstileToken) {
+      showReportFormStatus(t("botCheckFailed"));
       return;
     }
-    alert(data.message || t("botCheckFailed"));
-    return;
-  }
 
-  elements.issueForm.reset();
-  elements.issueForm.is_anonymous.checked = true;
-  toggleDisplayName();
-  elements.reportDialog.close();
-  await refreshDashboard();
+    const form = new FormData(elements.issueForm);
+    const payload = {
+      title: form.get("title"),
+      body: form.get("body"),
+      branch_id: form.get("branch_id"),
+      category: form.get("category"),
+      staff_name: form.get("staff_name"),
+      staff_role: form.get("staff_role"),
+      is_anonymous: form.get("is_anonymous") === "on",
+      display_name: form.get("display_name"),
+      turnstile_token: turnstileToken
+    };
+
+    const response = await fetch("/api/issues", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-member-token": getStoredMemberToken(),
+        "x-locale": state.locale
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const data = await safeJson(response);
+      if (response.status === 401) {
+        clearStoredVerification();
+        elements.reportDialog.close();
+        openDialog(elements.verifyDialog);
+        updatePhotoStatus("error", data.message || t("verifyBeforePosting"));
+        return;
+      }
+      showReportFormStatus(response.status === 403 ? formatBotCheckMessage(data) : data.message || t("botCheckFailed"));
+      return;
+    }
+
+    elements.issueForm.reset();
+    elements.issueForm.is_anonymous.checked = true;
+    toggleDisplayName();
+    elements.reportDialog.close();
+    await refreshDashboard();
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = originalText;
+  }
 }
 
 async function vote(event) {
@@ -644,7 +684,7 @@ async function vote(event) {
     return;
   }
 
-  const turnstileToken = await getTurnstileToken().catch(() => "");
+  const turnstileToken = await getTurnstileTokenForSubmit().catch(() => "");
   if (turnstileEnabled() && !turnstileToken) {
     button.disabled = false;
     button.textContent = originalText;
@@ -670,7 +710,7 @@ async function vote(event) {
       updatePhotoStatus("error", data.message || t("verifyBeforePosting"));
     }
     if (response.status === 403) {
-      alert(data.message || t("botCheckFailed"));
+      alert(formatBotCheckMessage(data));
     }
     button.disabled = false;
     button.textContent = originalText;
@@ -686,6 +726,12 @@ function toggleDisplayName() {
 
 async function submitVerification(event) {
   event.preventDefault();
+
+  if (state.verification.verified) {
+    updatePhotoStatus("success", t("alreadyVerified"));
+    renderVerificationState();
+    return;
+  }
 
   const originalFile = elements.verifyPhotoInput.files?.[0];
   if (!originalFile) {
@@ -717,9 +763,10 @@ async function submitVerification(event) {
 
     // Resolve turnstile token and EXIF slice in parallel — both may already
     // be in-flight from when the user selected the photo.
-    const [turnstileToken, photoBlob] = await Promise.all([
-      getTurnstileToken().catch(() => ""),
-      state.exifSlicePromise || prereadExifSlice(originalFile)
+    const sliceBytes = exifSliceSize(originalFile);
+    const [turnstileToken] = await Promise.all([
+      getTurnstileTokenForSubmit().catch(() => ""),
+      state.exifSlicePromise || prereadExifSlice(originalFile, sliceBytes)
     ]);
 
     if (turnstileEnabled() && !turnstileToken) {
@@ -729,8 +776,7 @@ async function submitVerification(event) {
 
     const form = new FormData();
     form.set("branch_id", elements.verifyBranch.value);
-    // Send the EXIF slice blob — same filename, fraction of the upload size.
-    form.set("photo", photoBlob || originalFile.slice(0, EXIF_SLICE_BYTES), originalFile.name);
+    form.set("photo", buildExifUploadBlob(originalFile, sliceBytes), originalFile.name);
     form.set("turnstile_token", turnstileToken);
 
     const response = await fetch("/api/verify-photo", {
@@ -741,7 +787,7 @@ async function submitVerification(event) {
     const data = await safeJson(response);
 
     if (!response.ok || !data.verified) {
-      updatePhotoStatus("error", data.message || t("verificationFailed"));
+      updatePhotoStatus("error", data.message || formatBotCheckMessage(data) || t("verificationFailed"));
       state.verificationChecks = data.checks || null;
       renderVerificationDetails(state.verificationChecks);
       return;
@@ -756,19 +802,35 @@ async function submitVerification(event) {
     updatePhotoStatus("success", t("verificationSuccess"));
     state.verificationChecks = data.checks || null;
     renderVerificationDetails(state.verificationChecks);
+    renderVerificationState();
   } finally {
     elements.verifyForm.classList.remove("is-loading");
     submitButton.disabled = false;
     submitButton.textContent = originalText;
+    renderVerificationState();
   }
 }
 
-// Read the first EXIF_SLICE_BYTES of a file as a Blob.
-// JPEG EXIF is always in the first APP1 segment (typically < 64 KB).
-// HEIC metadata boxes (meta/iinf/iloc) live near the file start too.
-// 512 KB is a very safe ceiling for any phone-captured JPEG or HEIC.
-function prereadExifSlice(file) {
-  return file.slice(0, EXIF_SLICE_BYTES).arrayBuffer().then(
+function isHeicFile(file) {
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  return type.includes("heic") || type.includes("heif") || name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+function exifSliceSize(file) {
+  return isHeicFile(file) ? EXIF_SLICE_BYTES_HEIC : EXIF_SLICE_BYTES_JPEG;
+}
+
+function buildExifUploadBlob(file, sliceBytes = exifSliceSize(file)) {
+  const end = Math.min(Math.max(1, sliceBytes), file.size);
+  const type = file.type || "application/octet-stream";
+  const slice = file.slice(0, end, type);
+  return new File([slice], file.name, { type, lastModified: file.lastModified });
+}
+
+// Warm the EXIF slice read while the user is still in the picker UI.
+function prereadExifSlice(file, sliceBytes = exifSliceSize(file)) {
+  return file.slice(0, sliceBytes).arrayBuffer().then(
     (buf) => new Blob([buf], { type: file.type || "image/jpeg" }),
     () => null  // fallback: fetch() will read the slice itself at upload time
   );
@@ -778,7 +840,9 @@ function updatePhotoStatus(tone = "neutral", message = "") {
   const file = elements.verifyPhotoInput.files?.[0];
   elements.photoPickerStatus.classList.toggle("error", tone === "error");
   elements.photoPickerStatus.classList.toggle("success", tone === "success");
-  elements.photoPickerStatus.textContent = message || (file
+  elements.photoPickerStatus.textContent = message || (state.verification.verified
+    ? t("alreadyVerified")
+    : file
     ? tone === "success"
       ? t("photoReady")
       : `${t("selectedPhoto")} ${file.name}`
@@ -826,6 +890,7 @@ async function refreshVerificationStatus() {
   const token = getStoredMemberToken();
   if (!token) {
     state.verification = { verified: false, expires_at: null };
+    renderVerificationState();
     return;
   }
 
@@ -844,6 +909,8 @@ async function refreshVerificationStatus() {
   if (!state.verification.verified) {
     clearStoredVerification();
   }
+
+  renderVerificationState();
 }
 
 function getStoredMemberToken() {
@@ -854,56 +921,87 @@ function clearStoredVerification() {
   localStorage.removeItem("memberToken");
   localStorage.removeItem("verificationExpiresAt");
   state.verification = { verified: false, expires_at: null };
+  renderVerificationState();
+}
+
+function renderVerificationState() {
+  const verified = Boolean(state.verification.verified);
+  elements.verificationBadge?.classList.toggle("hidden", !verified);
+  if (elements.verifyButton) {
+    elements.verifyButton.textContent = verified ? t("verifiedCta") : t("verifyCta");
+    elements.verifyButton.classList.toggle("verified", verified);
+  }
+  if (elements.checkPhotoButton) {
+    elements.checkPhotoButton.disabled = verified;
+    elements.checkPhotoButton.textContent = verified ? t("verifiedCta") : t("checkPhoto");
+  }
+  if (verified) {
+    updatePhotoStatus("success", t("alreadyVerified"));
+  }
 }
 
 function turnstileEnabled() {
   return Boolean(turnstileSiteKey && !turnstileSiteKey.includes("__"));
 }
 
-async function getTurnstileToken() {
+function prepareTurnstile() {
+  if (!turnstileEnabled()) return;
+  loadTurnstileScript()
+    .then(() => waitForTurnstile())
+    .then((turnstile) => {
+      ensureTurnstileWidget(turnstile);
+    })
+    .catch(() => {});
+}
+
+async function getTurnstileTokenForSubmit() {
   if (!turnstileEnabled()) return "";
 
-  if (state.cachedTurnstileToken && state.cachedTurnstileExpiresAt > Date.now() + 5000) {
-    const token = state.cachedTurnstileToken;
-    state.cachedTurnstileToken = null;
-    state.cachedTurnstileExpiresAt = 0;
-    return token;
-  }
-
-  if (state.turnstileTokenPromise) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const token = await state.turnstileTokenPromise;
-      if (state.cachedTurnstileToken === token) {
-        const isFresh = state.cachedTurnstileExpiresAt > Date.now() + 5000;
-        state.cachedTurnstileToken = null;
-        state.cachedTurnstileExpiresAt = 0;
-        if (!isFresh) return requestTurnstileToken();
-      }
-      return token;
-    } finally {
-      state.turnstileTokenPromise = null;
+      return await requestTurnstileToken();
+    } catch (error) {
+      lastError = error;
     }
   }
 
-  return requestTurnstileToken();
+  throw lastError || new Error("Turnstile failed");
 }
 
-function prefetchTurnstileToken() {
-  if (!turnstileEnabled() || !elements.verifyPhotoInput.files?.[0]) return;
-  if (state.cachedTurnstileToken && state.cachedTurnstileExpiresAt > Date.now() + 5000) return;
-  if (state.turnstileTokenPromise) return;
+function formatBotCheckMessage(data) {
+  const message = data?.message || t("botCheckFailed");
+  const errors = Array.isArray(data?.turnstile_errors) ? data.turnstile_errors : [];
+  if (errors.includes("timeout-or-duplicate")) {
+    return t("botCheckExpired");
+  }
+  if (errors.includes("invalid-input-response")) {
+    return t("botCheckInvalid");
+  }
+  if (errors.includes("invalid-input-secret")) {
+    return t("botCheckSecretInvalid");
+  }
+  if (errors.includes("missing-input-response")) {
+    return t("botCheckMissing");
+  }
+  if (errors.length > 0) {
+    return `${message} (${errors.join(", ")})`;
+  }
+  return message;
+}
 
-  state.turnstileTokenPromise = requestTurnstileToken()
-    .then((token) => {
-      state.cachedTurnstileToken = token;
-      state.cachedTurnstileExpiresAt = Date.now() + 240000;
-      return token;
-    })
-    .catch((error) => {
-      state.turnstileTokenPromise = null;
-      throw error;
-    });
-  state.turnstileTokenPromise.catch(() => {});
+function showReportFormStatus(message) {
+  if (!elements.reportFormStatus) {
+    alert(message);
+    return;
+  }
+  elements.reportFormStatus.textContent = message;
+  elements.reportFormStatus.hidden = !message;
+  elements.reportFormStatus.classList.toggle("is-visible", Boolean(message));
+}
+
+function clearReportFormStatus() {
+  showReportFormStatus("");
 }
 
 async function requestTurnstileToken() {
@@ -1002,6 +1100,9 @@ function loadTurnstileScript() {
     }, 50);
 
     script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    if (cspNonce) {
+      script.nonce = cspNonce;
+    }
     script.async = true;
     script.defer = true;
     script.dataset.turnstileApi = "true";

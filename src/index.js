@@ -5,26 +5,39 @@ const jsonHeaders = {
 
 const focusBranchSlug = "gulberg";
 const focusBranchId = "branch_gulberg";
-// Client sends a 512 KB EXIF slice, not the full photo.
-// 600 KB gives a small margin while still blocking abuse from non-browser clients.
-// The user-facing error still references 8 MB (the original file limit).
-const maxUploadBytes = 600 * 1024;
+// Accept up to 8 MB so Safari/Mac uploads still work if the browser sends the full file.
+// EXIF is always read from the first 512 KB only — the rest is ignored in memory.
+const maxOriginalPhotoBytes = 8 * 1024 * 1024;
+const maxExifReadBytes = 512 * 1024;
+const branchCacheTtlMs = 300000;
+let cachedFocusBranch = null;
+let cachedFocusBranchLoadedAt = 0;
 const defaultPhotoMaxAgeDays = 14;
 const defaultVerificationValidDays = 30;
 
-const htmlContentSecurityPolicy = [
-  "default-src 'self'",
-  "script-src 'self' https://challenges.cloudflare.com",
-  "connect-src 'self' https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com",
-  "img-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
-  "font-src 'self' data:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'"
-].join("; ");
+class InputValidationError extends Error {
+  constructor(message, field = null) {
+    super(message);
+    this.name = "InputValidationError";
+    this.field = field;
+  }
+}
+
+function htmlContentSecurityPolicy(nonce) {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com`,
+    "connect-src 'self' https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'"
+  ].join("; ");
+}
 
 const apiMessages = {
   en: {
@@ -71,8 +84,8 @@ const demoBranches = [
     name: "Gulberg",
     slug: "gulberg",
     city: "Lahore",
-    latitude: 31.5204,
-    longitude: 74.3587,
+    latitude: 31.539389,
+    longitude: 74.350469,
     radius_meters: 220
   }
 ];
@@ -126,17 +139,19 @@ async function withAbsoluteMetaUrls(response, url, env) {
   const robotsMeta = shouldExcludeRobots(url) ? "noindex, nofollow" : "index, follow";
   const turnstileSiteKey = String(env.TURNSTILE_SITE_KEY || "");
   const turnstileRequired = env.TURNSTILE_SECRET_KEY ? "true" : "false";
+  const cspNonce = crypto.randomUUID().replaceAll("-", "");
   const html = (await response.text())
     .replaceAll("__CANONICAL_URL__", canonicalUrl)
     .replaceAll("__OG_IMAGE_URL__", imageUrl)
     .replaceAll("__ROBOTS_META__", robotsMeta)
+    .replaceAll("__CSP_NONCE__", cspNonce)
     .replaceAll("__TURNSTILE_SITE_KEY__", turnstileSiteKey)
     .replaceAll("__TURNSTILE_REQUIRED__", turnstileRequired);
 
   const headers = {
     ...Object.fromEntries(response.headers),
     "content-type": "text/html; charset=utf-8",
-    ...securityHeaders(url, { html: true })
+    ...securityHeaders(url, { html: true, cspNonce })
   };
   if (shouldExcludeRobots(url)) {
     headers["x-robots-tag"] = "noindex, nofollow";
@@ -202,7 +217,7 @@ function securityHeaders(url, options = {}) {
   };
 
   if (options.html) {
-    headers["content-security-policy"] = htmlContentSecurityPolicy;
+    headers["content-security-policy"] = htmlContentSecurityPolicy(options.cspNonce || "");
   }
 
   if (url.protocol === "https:") {
@@ -259,6 +274,14 @@ async function handleApi(request, env, url) {
 
     return json({ error: "Route not found" }, 404);
   } catch (error) {
+    if (error instanceof InputValidationError) {
+      return json({
+        error: "invalid_issue",
+        status: "invalid_issue",
+        field: error.field,
+        message: error.message
+      }, 400);
+    }
     return json({ error: "Unexpected API error", detail: error.message }, 500);
   }
 }
@@ -339,6 +362,8 @@ async function getIssue(env, id) {
 }
 
 async function createIssue(env, input, request) {
+  const issue = validateIssueInput(input);
+
   const turnstileError = await requireTurnstile(env, request, input?.turnstile_token);
   if (turnstileError) return turnstileError;
 
@@ -349,7 +374,6 @@ async function createIssue(env, input, request) {
     });
   }
 
-  const issue = validateIssueInput(input);
   const now = new Date().toISOString();
   const id = `issue_${crypto.randomUUID()}`;
 
@@ -463,17 +487,21 @@ async function verifyPhoto(env, request) {
     return verificationError("wrong_branch", "Verification is currently open for Gulberg branch only.", request, {}, emptyVerificationChecks(branchId));
   }
 
-  if (photo.size > maxUploadBytes) {
+  if (photo.size > maxOriginalPhotoBytes) {
     return verificationError("photo_too_large", "Photo is too large. Use an original image under 8 MB.", request, {}, emptyVerificationChecks(branchId));
   }
 
   const turnstilePromise = requireTurnstile(env, request, form.get("turnstile_token"));
-  const branchPromise = getVerificationBranch(env, branchId);
-  const buffer = await photo.arrayBuffer();
+  const [fullBuffer, branch] = await Promise.all([
+    photo.arrayBuffer(),
+    getVerificationBranch(env, branchId)
+  ]);
+  const buffer = fullBuffer.byteLength > maxExifReadBytes
+    ? fullBuffer.slice(0, maxExifReadBytes)
+    : fullBuffer;
+
   const metadata = readImageMetadata(buffer);
   const takenAt = parsePhotoTakenAt(metadata);
-  const [turnstileError, branch] = await Promise.all([turnstilePromise, branchPromise]);
-  if (turnstileError) return turnstileError;
   const baseChecks = buildVerificationChecks({
     metadata,
     branch,
@@ -533,6 +561,9 @@ async function verifyPhoto(env, request) {
     );
   }
 
+  const turnstileError = await turnstilePromise;
+  if (turnstileError) return turnstileError;
+
   const now = new Date();
   const validDays = numberFromEnv(env.VERIFICATION_VALID_DAYS, defaultVerificationValidDays);
   const expiresAt = new Date(now.getTime() + validDays * 86400000);
@@ -588,20 +619,32 @@ async function verifyPhoto(env, request) {
 }
 
 async function getVerificationBranch(env, branchId) {
-  if (!env.DB) {
-    return demoBranches.find((branch) => branch.id === focusBranchId) || null;
+  if (branchId !== focusBranchId) return null;
+
+  const now = Date.now();
+  if (cachedFocusBranch && now - cachedFocusBranchLoadedAt < branchCacheTtlMs) {
+    return cachedFocusBranch;
   }
 
-  return env.DB.prepare(
-    `
-      SELECT id, name, slug, latitude, longitude, radius_meters
-      FROM branches
-      WHERE id = ?
-        AND slug = ?
-        AND is_active = 1
-      LIMIT 1
-    `
-  ).bind(branchId, focusBranchSlug).first();
+  const branch = env.DB
+    ? await env.DB.prepare(
+      `
+        SELECT id, name, slug, latitude, longitude, radius_meters
+        FROM branches
+        WHERE id = ?
+          AND slug = ?
+          AND is_active = 1
+        LIMIT 1
+      `
+    ).bind(branchId, focusBranchSlug).first()
+    : demoBranches.find((item) => item.id === focusBranchId) || null;
+
+  if (branch) {
+    cachedFocusBranch = branch;
+    cachedFocusBranchLoadedAt = now;
+  }
+
+  return branch;
 }
 
 function verificationError(status, message, request, params = {}, checks = null) {
@@ -825,7 +868,7 @@ function validateIssueInput(input) {
   const required = ["branch_id", "title", "body", "category"];
   for (const key of required) {
     if (!input?.[key] || String(input[key]).trim().length === 0) {
-      throw new Error(`${key} is required`);
+      throw new InputValidationError(`${issueFieldLabel(key)} is required.`, key);
     }
   }
 
@@ -841,6 +884,16 @@ function validateIssueInput(input) {
     is_anonymous: isAnonymous,
     display_name: !isAnonymous && input.display_name ? String(input.display_name).trim().slice(0, 80) : null
   };
+}
+
+function issueFieldLabel(key) {
+  const labels = {
+    branch_id: "Branch",
+    title: "Title",
+    body: "Description",
+    category: "Category"
+  };
+  return labels[key] || key;
 }
 
 function readImageMetadata(buffer) {
@@ -1327,7 +1380,13 @@ async function requireTurnstile(env, request, token) {
   const result = await response.json();
   if (result.success) return null;
 
-  return apiError("bot_check_failed", "Bot check failed. Please try again.", 403, {}, request);
+  return apiError(
+    "bot_check_failed",
+    "Bot check failed. Please try again.",
+    403,
+    { turnstile_errors: result["error-codes"] || [] },
+    request
+  );
 }
 
 function apiError(status, message, httpStatus = 400, extra = {}, request = null, options = {}) {
